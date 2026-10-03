@@ -13,11 +13,9 @@ import {
   Card,
   CardContent,
   Chip,
-  CircularProgress,
-  Divider,
-  Tooltip
+  CircularProgress
 } from '@mui/material';
-import { Bolt, AccessTime, CheckCircle, GroupAdd, RestartAlt } from '@mui/icons-material';
+import { Bolt, CheckCircle, RestartAlt } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
 import GlobalFormLayout from '../Common_Bar/GlobalFormLayout';
 import Img from '../../assets/Congratulations.jpg';
