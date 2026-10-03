@@ -126,9 +126,19 @@ class AttendanceCreate(AttendanceBase):
 class DepartmentBase(BaseModel):
     departmentName: Optional[str] = None
     department_name: Optional[str] = None
+    section: Optional[str] = ""
+    headOfDepartment: Optional[str] = ""
+    head_of_department: Optional[str] = ""
     manager: Optional[str] = ""
     parentDepartment: Optional[str] = ""
     parent_department: Optional[str] = ""
+    staffCount: Optional[str] = ""
+    staff_count: Optional[str] = ""
+    budgetExpense: Optional[str] = ""
+    budget_expense: Optional[str] = ""
+    inventoryResources: Optional[str] = ""
+    inventory_resources: Optional[str] = ""
+    description: Optional[str] = ""
 
 class DepartmentCreate(DepartmentBase):
     pass

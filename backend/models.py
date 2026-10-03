@@ -85,8 +85,14 @@ class Department(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     department_name = Column(String, index=True)
+    section = Column(String, nullable=True)
+    head_of_department = Column(String, nullable=True)
     manager = Column(String, nullable=True)
     parent_department = Column(String, nullable=True)
+    staff_count = Column(String, nullable=True)
+    budget_expense = Column(String, nullable=True)
+    inventory_resources = Column(Text, nullable=True)
+    description = Column(Text, nullable=True)
 
 
 # ==================== NEW MODELS ====================

@@ -396,9 +396,19 @@ def serialize_department(dept: models.Department):
         "departmentName": dept.department_name,
         "department_name": dept.department_name,
         "name": dept.department_name,
-        "manager": dept.manager or "",
+        "section": dept.section or "",
+        "headOfDepartment": dept.head_of_department or dept.manager or "",
+        "head_of_department": dept.head_of_department or dept.manager or "",
+        "manager": dept.manager or dept.head_of_department or "",
         "parentDepartment": dept.parent_department or "",
         "parent_department": dept.parent_department or "",
+        "staffCount": dept.staff_count or "0",
+        "staff_count": dept.staff_count or "0",
+        "budgetExpense": dept.budget_expense or "0",
+        "budget_expense": dept.budget_expense or "0",
+        "inventoryResources": dept.inventory_resources or "",
+        "inventory_resources": dept.inventory_resources or "",
+        "description": dept.description or "",
     }
 
 @app.get("/api/departments")
@@ -410,10 +420,21 @@ def get_departments(db: Session = Depends(get_db)):
 def create_department(dept: schemas.DepartmentCreate, db: Session = Depends(get_db)):
     d_name = dept.departmentName or dept.department_name or "General"
     p_dept = dept.parentDepartment or dept.parent_department or ""
+    head = dept.headOfDepartment or dept.head_of_department or dept.manager or ""
+    staff = dept.staffCount or dept.staff_count or "0"
+    budget = dept.budgetExpense or dept.budget_expense or "0"
+    inventory = dept.inventoryResources or dept.inventory_resources or ""
+
     db_dept = models.Department(
         department_name=d_name,
-        manager=dept.manager or "",
+        section=dept.section or "",
+        head_of_department=head,
+        manager=head,
         parent_department=p_dept,
+        staff_count=str(staff),
+        budget_expense=str(budget),
+        inventory_resources=inventory,
+        description=dept.description or "",
     )
     db.add(db_dept)
     db.commit()
@@ -421,8 +442,12 @@ def create_department(dept: schemas.DepartmentCreate, db: Session = Depends(get_
     return serialize_department(db_dept)
 
 @app.delete("/api/departments/{dept_id}")
-def delete_department(dept_id: int, db: Session = Depends(get_db)):
-    d = db.query(models.Department).filter(models.Department.id == dept_id).first()
+def delete_department(dept_id: str, db: Session = Depends(get_db)):
+    d = None
+    if dept_id.isdigit():
+        d = db.query(models.Department).filter(models.Department.id == int(dept_id)).first()
+    if not d:
+        d = db.query(models.Department).filter(models.Department.department_name == dept_id).first()
     if not d:
         raise HTTPException(status_code=404, detail="Department not found")
     db.delete(d)
