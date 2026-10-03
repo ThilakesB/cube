@@ -21,10 +21,10 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 400,
+  width: 420,
   bgcolor: 'background.paper',
   boxShadow: 24,
-  borderRadius: '10px',
+  borderRadius: '12px',
   p: 4,
   display: 'flex',
   flexDirection: 'column',
@@ -72,20 +72,31 @@ const AddHoliday = () => {
     setError('');
 
     try {
-      // Attempt backend call
+      let savedHoliday = { ...formData };
       try {
-        await fetch(`${API_BASE_URL}/api/holidays`, {
+        const response = await fetch(`${API_BASE_URL}/api/holidays`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData)
         });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.holiday) {
+            savedHoliday = data.holiday;
+          }
+        }
       } catch (backendErr) {
         console.warn('Backend not responding, persisting locally:', backendErr);
       }
 
-      // Persist locally for immediate availability
+      // Persist locally for immediate reflection
       const existingHolidays = JSON.parse(localStorage.getItem('holidaysData')) || [];
-      const updatedHolidays = [...existingHolidays, formData];
+      const updatedHolidays = [
+        ...existingHolidays.filter(
+          (h) => (h.name || '').trim().toLowerCase() !== (savedHoliday.name || '').trim().toLowerCase()
+        ),
+        savedHoliday
+      ];
       localStorage.setItem('holidaysData', JSON.stringify(updatedHolidays));
 
       setOpenModal(true);
@@ -107,7 +118,7 @@ const AddHoliday = () => {
   return (
     <GlobalFormLayout title="Add Holiday" backLink="/holidays">
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: '10px' }}>
           {error}
         </Alert>
       )}
@@ -222,33 +233,34 @@ const AddHoliday = () => {
             sx={{
               width: '200px',
               height: '46px',
-              backgroundColor: '#004E69',
+              backgroundColor: '#7B61FF',
               borderRadius: '10px',
               textTransform: 'none',
               fontFamily: 'Lato',
               fontWeight: '700',
               fontSize: '14px',
               color: '#ffffff',
-              '&:hover': { backgroundColor: '#003A4F' }
+              boxShadow: '0 2px 6px rgba(123, 97, 255, 0.25)',
+              '&:hover': { backgroundColor: '#624BCC' }
             }}
           >
             Save Holiday
           </Button>
           <Button
             type="button"
-            variant="contained"
+            variant="outlined"
             onClick={handleCancel}
             sx={{
               width: '130px',
               height: '46px',
-              backgroundColor: '#004E69',
+              borderColor: '#E5E7EB',
+              color: '#374151',
               borderRadius: '10px',
               textTransform: 'none',
               fontFamily: 'Lato',
               fontWeight: '700',
               fontSize: '14px',
-              color: '#ffffff',
-              '&:hover': { backgroundColor: '#003A4F' }
+              '&:hover': { backgroundColor: '#F9FAFB', borderColor: '#D1D5DB' }
             }}
           >
             Cancel
@@ -281,12 +293,14 @@ const AddHoliday = () => {
             variant="contained"
             sx={{
               color: 'white',
-              bgcolor: '#004E69',
+              bgcolor: '#7B61FF',
               margin: '10px',
               textTransform: 'none',
               borderRadius: '10px',
               px: 4,
-              '&:hover': { bgcolor: '#003A4F' }
+              fontWeight: 600,
+              boxShadow: '0 2px 6px rgba(123, 97, 255, 0.25)',
+              '&:hover': { bgcolor: '#624BCC' }
             }}
           >
             Continue

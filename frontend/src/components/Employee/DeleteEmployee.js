@@ -1,43 +1,134 @@
 // DeleteEmployee.js
-import { Box, Button, Typography } from '@mui/material';
 import React from 'react';
+import { Box, Button, Typography, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 
-const DeleteEmployee = ({ selectedEmployee, onDelete,onClose }) => {
+const DeleteEmployee = ({ selectedEmployee, onDelete, onClose }) => {
   const handleDelete = () => {
-    onDelete(selectedEmployee.staffId);
+    onDelete(selectedEmployee?.staffId || selectedEmployee?.staff_id);
   };
 
+  const employeeName =
+    [selectedEmployee?.firstname, selectedEmployee?.lastname].filter(Boolean).join(' ') ||
+    selectedEmployee?.firstname ||
+    selectedEmployee?.name ||
+    'this employee';
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-around', mt: 5 }}>
-        <Typography sx={{ width: '280px', height: '38px', fontWeight: '400', fontSize: '32px', color: '#252C58', ml: 3 }}>
+    <Box sx={{ p: 3.5, position: 'relative', width: '100%', boxSizing: 'border-box' }}>
+      {/* Top close button */}
+      <IconButton
+        onClick={onClose}
+        size="small"
+        aria-label="close"
+        sx={{
+          position: 'absolute',
+          top: 12,
+          right: 12,
+          color: '#9CA3AF',
+          transition: 'all 0.2s',
+          '&:hover': { color: '#374151', bgcolor: '#F3F4F6' },
+        }}
+      >
+        <CloseIcon fontSize="small" />
+      </IconButton>
+
+      {/* Warning Icon & Confirmation Details */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', pt: 0.5 }}>
+        <Box
+          sx={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            bgcolor: '#FEE2E2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            mb: 2,
+            color: '#EF4444',
+          }}
+        >
+          <DeleteOutlineOutlinedIcon sx={{ fontSize: 26 }} />
+        </Box>
+
+        <Typography
+          sx={{
+            fontWeight: 700,
+            fontSize: '18px',
+            color: '#111827',
+            mb: 1,
+            letterSpacing: '-0.01em',
+          }}
+        >
           Delete Employee
         </Typography>
-        <CloseIcon onClick={onClose} style={{ color: '#2596BE' }} />
-      </Box>
-      <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', mt: 15, ml: 3 }}>
-        <Typography sx={{ width: '486px', height: '24px', fontWeight: '400', fontSize: '20px', color: '#727272', ml: 3 }}>
-        Are you sure want to delete the Employee "{selectedEmployee?.firstname}" ?
+
+        <Typography
+          sx={{
+            fontWeight: 400,
+            fontSize: '14px',
+            color: '#6B7280',
+            lineHeight: 1.5,
+            px: 1,
+            mb: 3,
+          }}
+        >
+          Are you sure you want to delete{' '}
+          <Typography
+            component="span"
+            sx={{ fontWeight: 600, color: '#1F2937', fontSize: '14px' }}
+          >
+            "{employeeName}"
+          </Typography>
+          ? This action cannot be undone.
         </Typography>
-        <Box sx={{ mt: 20, display: 'flex', justifyContent: 'space-evenly' }}>
+
+        {/* Action Buttons */}
+        <Box sx={{ display: 'flex', width: '100%', gap: 1.5, justifyContent: 'center' }}>
           <Button
             variant="outlined"
-            sx={{ width: '100px', height: '40px', borderRadius: '4px', border: '1px solid #2596BE' }}
             onClick={onClose}
+            fullWidth
+            sx={{
+              py: 1,
+              borderRadius: '8px',
+              borderColor: '#E5E7EB',
+              color: '#374151',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '14px',
+              bgcolor: '#FFFFFF',
+              borderWidth: '1px',
+              boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+              '&:hover': {
+                bgcolor: '#F9FAFB',
+                borderColor: '#D1D5DB',
+              },
+            }}
           >
-            <Typography sx={{ width: '60px', height: '24px', fontWeight: '400', fontSize: '16px', color: '#2596BE' }}>
-              Cancel
-            </Typography>
+            Cancel
           </Button>
           <Button
             variant="contained"
-            sx={{ ml: 30, background: '#004E69', width: '100px', height: '40px', borderRadius: '4px', '&:hover': { background: '#004E69' } }}
             onClick={handleDelete}
+            fullWidth
+            sx={{
+              py: 1,
+              borderRadius: '8px',
+              bgcolor: '#DC2626',
+              color: '#FFFFFF',
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '14px',
+              boxShadow: '0 1px 3px 0 rgba(220, 38, 38, 0.35)',
+              '&:hover': {
+                bgcolor: '#B91C1C',
+                boxShadow: '0 4px 6px -1px rgba(220, 38, 38, 0.4)',
+              },
+            }}
           >
-            <Typography sx={{ width: '59px', height: '24px', fontWeight: '400', fontSize: '16px', color: '#FFFFFF' }}>
-              Delete
-            </Typography>
+            Delete
           </Button>
         </Box>
       </Box>

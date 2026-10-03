@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Alert,
   Box,
@@ -6,529 +6,749 @@ import {
   FormControl,
   Grid,
   MenuItem,
-  Modal,
   Select,
   TextField,
-  Typography
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import GlobalFormLayout from '../Common_Bar/GlobalFormLayout';
-import Img from '../../assets/Congratulations.jpg';
-import { API_BASE_URL } from '../../config/api';
+  Typography,
+  Card,
+  CardContent,
+  Divider,
+  InputAdornment,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  LinearProgress,
+} from "@mui/material";
+import {
+  CheckCircleRounded,
+  ArrowBackRounded,
+  SaveRounded,
+  AttachMoneyRounded,
+  CalculateRounded,
+  PersonOutlineRounded,
+  AccountBalanceWalletRounded,
+  ReceiptLongRounded,
+} from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
+import GlobalFormLayout from "../Common_Bar/GlobalFormLayout";
+import { API_BASE_URL } from "../../config/api";
 
-const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  bgcolor: 'background.paper',
-  boxShadow: 24,
-  borderRadius: '10px',
-  p: 4,
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center'
-};
+const designations = [
+  "Web Developer",
+  "Backend Developer",
+  "Frontend Engineer",
+  "UI/UX Designer",
+  "Product Manager",
+  "DevOps Engineer",
+  "QA Engineer",
+  "HR Specialist",
+  "Financial Analyst",
+  "Marketing Strategist",
+];
 
 const AddSalary = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: '',
-    id: '',
-    role: 'Web Developer',
-    email: '',
-    mobile: '',
-    joinDate: new Date().toISOString().split('T')[0],
-    basic: '',
-    da: '',
-    hra: '',
-    conveyance: '',
-    allowance: '',
-    medicalAllowance: '',
-    earningsOthers: '',
-    tds: '',
-    esi: '',
-    pf: '',
-    leave: '',
-    profTax: '',
-    labourWelfare: '',
-    deductionsOthers: ''
+    name: "",
+    id: `FT-${Math.floor(1000 + Math.random() * 9000)}`,
+    role: "Web Developer",
+    email: "",
+    mobile: "",
+    joinDate: new Date().toISOString().split("T")[0],
+    basic: "",
+    da: "",
+    hra: "",
+    conveyance: "",
+    allowance: "",
+    medicalAllowance: "",
+    earningsOthers: "",
+    tds: "",
+    esi: "",
+    pf: "",
+    leave: "",
+    profTax: "200",
+    labourWelfare: "50",
+    deductionsOthers: "",
   });
 
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [openModal, setOpenModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (field) => (event) => {
-    setFormData({ ...formData, [field]: event.target.value });
+    const value = event.target.value;
+    setFormData((prev) => {
+      const updated = { ...prev, [field]: value };
+
+      // Optional smart auto-calculation for DA & HRA when Basic is entered
+      if (field === "basic" && Number(value) > 0) {
+        const numBasic = Number(value);
+        if (!prev.da) updated.da = String(Math.round(numBasic * 0.1));
+        if (!prev.hra) updated.hra = String(Math.round(numBasic * 0.15));
+        if (!prev.pf) updated.pf = String(Math.round(numBasic * 0.05));
+      }
+      return updated;
+    });
   };
 
-  const calculateNetSalary = () => {
-    const earnings =
-      (Number(formData.basic) || 0) +
-      (Number(formData.da) || 0) +
-      (Number(formData.hra) || 0) +
-      (Number(formData.conveyance) || 0) +
-      (Number(formData.allowance) || 0) +
-      (Number(formData.medicalAllowance) || 0) +
-      (Number(formData.earningsOthers) || 0);
+  const grossEarnings =
+    (Number(formData.basic) || 0) +
+    (Number(formData.da) || 0) +
+    (Number(formData.hra) || 0) +
+    (Number(formData.conveyance) || 0) +
+    (Number(formData.allowance) || 0) +
+    (Number(formData.medicalAllowance) || 0) +
+    (Number(formData.earningsOthers) || 0);
 
-    const deductions =
-      (Number(formData.tds) || 0) +
-      (Number(formData.esi) || 0) +
-      (Number(formData.pf) || 0) +
-      (Number(formData.leave) || 0) +
-      (Number(formData.profTax) || 0) +
-      (Number(formData.labourWelfare) || 0) +
-      (Number(formData.deductionsOthers) || 0);
+  const totalDeductions =
+    (Number(formData.tds) || 0) +
+    (Number(formData.esi) || 0) +
+    (Number(formData.pf) || 0) +
+    (Number(formData.leave) || 0) +
+    (Number(formData.profTax) || 0) +
+    (Number(formData.labourWelfare) || 0) +
+    (Number(formData.deductionsOthers) || 0);
 
-    return Math.max(0, earnings - deductions);
-  };
+  const netSalary = Math.max(0, grossEarnings - totalDeductions);
+  const takeHomePercent = grossEarnings > 0 ? Math.round((netSalary / grossEarnings) * 100) : 100;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     if (!formData.name.trim() || !formData.id.trim() || !formData.basic) {
-      setError('Please provide Employee Name, Employee ID, and Basic Salary.');
+      setError("Please provide Employee Name, Employee ID, and Basic Salary.");
       return;
     }
 
-    setError('');
+    setError("");
+    setSubmitting(true);
 
-    const netSalary = calculateNetSalary();
     const newRecord = {
       ...formData,
       salary: netSalary,
-      netSalary: netSalary
+      netSalary: netSalary,
     };
 
     try {
       try {
         await fetch(`${API_BASE_URL}/api/salaries`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newRecord)
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newRecord),
         });
       } catch (backendErr) {
-        console.warn('Backend not reachable, saving locally:', backendErr);
+        console.warn("Backend not reachable, saving locally:", backendErr);
       }
 
-      const existingPayroll = JSON.parse(localStorage.getItem('payrollData')) || [];
-      const updatedPayroll = [...existingPayroll, newRecord];
-      localStorage.setItem('payrollData', JSON.stringify(updatedPayroll));
+      const existingPayroll = JSON.parse(localStorage.getItem("payrollData")) || [];
+      const updatedPayroll = [newRecord, ...existingPayroll.filter((e) => e.id !== newRecord.id)];
+      localStorage.setItem("payrollData", JSON.stringify(updatedPayroll));
       setOpenModal(true);
     } catch (err) {
-      console.error('Error saving salary data:', err);
-      setError('Failed to save salary details.');
+      console.error("Error saving salary data:", err);
+      setError("Failed to save salary details. Please retry.");
+    } finally {
+      setSubmitting(false);
     }
-  };
-
-  const handleCancel = () => {
-    navigate('/payroll');
   };
 
   const handleContinue = () => {
     setOpenModal(false);
-    navigate('/payroll');
+    navigate("/payroll");
   };
 
   return (
     <GlobalFormLayout title="Add Staff Salary" backLink="/payroll">
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: "10px" }}>
           {error}
         </Alert>
       )}
 
       <Box component="form" onSubmit={handleSubmit}>
-        {/* Section 1: Staff Details */}
-        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: '#004E69' }}>
-          Staff Information
-        </Typography>
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={4}>
-            <Typography sx={{ fontWeight: '500', fontSize: '14px', lineHeight: '24px', color: '#121212' }}>
-              Employee Name
-            </Typography>
-            <TextField
-              value={formData.name}
-              onChange={handleChange('name')}
-              placeholder="Enter employee full name"
-              fullWidth
-              sx={{
-                mt: '10px',
-                borderRadius: '10px',
-                border: '1px solid #D0D0D0',
-                '& .MuiInputBase-root': { height: '50px' },
-                '& .MuiInputBase-input': { padding: '0 14px' }
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={4}>
-            <Typography sx={{ fontWeight: '500', fontSize: '14px', lineHeight: '24px', color: '#121212' }}>
-              Employee ID
-            </Typography>
-            <TextField
-              value={formData.id}
-              onChange={handleChange('id')}
-              placeholder="e.g. FT-0010"
-              fullWidth
-              sx={{
-                mt: '10px',
-                borderRadius: '10px',
-                border: '1px solid #D0D0D0',
-                '& .MuiInputBase-root': { height: '50px' },
-                '& .MuiInputBase-input': { padding: '0 14px' }
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={4}>
-            <Typography sx={{ fontWeight: '500', fontSize: '14px', lineHeight: '24px', color: '#121212' }}>
-              Role / Designation
-            </Typography>
-            <FormControl fullWidth sx={{ mt: '10px' }}>
-              <Select
-                value={formData.role}
-                onChange={handleChange('role')}
-                sx={{ height: '50px', borderRadius: '10px', border: '1px solid #D0D0D0' }}
-              >
-                <MenuItem value="Web Developer">Web Developer</MenuItem>
-                <MenuItem value="UI Designer">UI Designer</MenuItem>
-                <MenuItem value="Backend Developer">Backend Developer</MenuItem>
-                <MenuItem value="Project Management">Project Management</MenuItem>
-                <MenuItem value="Human Resources">Human Resources</MenuItem>
-                <MenuItem value="Operations">Operations</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
-
-          <Grid item xs={12} sm={4}>
-            <Typography sx={{ fontWeight: '500', fontSize: '14px', lineHeight: '24px', color: '#121212' }}>
-              Email Address
-            </Typography>
-            <TextField
-              value={formData.email}
-              onChange={handleChange('email')}
-              placeholder="Enter email address"
-              fullWidth
-              sx={{
-                mt: '10px',
-                borderRadius: '10px',
-                border: '1px solid #D0D0D0',
-                '& .MuiInputBase-root': { height: '50px' },
-                '& .MuiInputBase-input': { padding: '0 14px' }
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={4}>
-            <Typography sx={{ fontWeight: '500', fontSize: '14px', lineHeight: '24px', color: '#121212' }}>
-              Mobile Number
-            </Typography>
-            <TextField
-              value={formData.mobile}
-              onChange={handleChange('mobile')}
-              placeholder="Enter mobile number"
-              fullWidth
-              sx={{
-                mt: '10px',
-                borderRadius: '10px',
-                border: '1px solid #D0D0D0',
-                '& .MuiInputBase-root': { height: '50px' },
-                '& .MuiInputBase-input': { padding: '0 14px' }
-              }}
-            />
-          </Grid>
-
-          <Grid item xs={12} sm={4}>
-            <Typography sx={{ fontWeight: '500', fontSize: '14px', lineHeight: '24px', color: '#121212' }}>
-              Join Date
-            </Typography>
-            <TextField
-              type="date"
-              value={formData.joinDate}
-              onChange={handleChange('joinDate')}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                mt: '10px',
-                borderRadius: '10px',
-                border: '1px solid #D0D0D0',
-                '& .MuiInputBase-root': { height: '50px' },
-                '& .MuiInputBase-input': { padding: '0 14px' }
-              }}
-            />
-          </Grid>
-        </Grid>
-
-        {/* Section 2: Earnings & Deductions */}
-        <Grid container spacing={4}>
-          {/* Earnings Column */}
-          <Grid item xs={12} md={6}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: '#004E69' }}>
-              Earnings
-            </Typography>
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>Basic Salary</Typography>
-                <TextField
-                  type="number"
-                  value={formData.basic}
-                  onChange={handleChange('basic')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>DA (Dearness Allowance)</Typography>
-                <TextField
-                  type="number"
-                  value={formData.da}
-                  onChange={handleChange('da')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>HRA (House Rent Allowance)</Typography>
-                <TextField
-                  type="number"
-                  value={formData.hra}
-                  onChange={handleChange('hra')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>Conveyance</Typography>
-                <TextField
-                  type="number"
-                  value={formData.conveyance}
-                  onChange={handleChange('conveyance')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>Medical Allowance</Typography>
-                <TextField
-                  type="number"
-                  value={formData.medicalAllowance}
-                  onChange={handleChange('medicalAllowance')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>Other Allowances</Typography>
-                <TextField
-                  type="number"
-                  value={formData.allowance}
-                  onChange={handleChange('allowance')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-            </Box>
-          </Grid>
-
-          {/* Deductions Column */}
-          <Grid item xs={12} md={6}>
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2, color: '#004E69' }}>
-              Deductions
-            </Typography>
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>TDS</Typography>
-                <TextField
-                  type="number"
-                  value={formData.tds}
-                  onChange={handleChange('tds')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>ESI</Typography>
-                <TextField
-                  type="number"
-                  value={formData.esi}
-                  onChange={handleChange('esi')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>PF (Provident Fund)</Typography>
-                <TextField
-                  type="number"
-                  value={formData.pf}
-                  onChange={handleChange('pf')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>Leave Deductions</Typography>
-                <TextField
-                  type="number"
-                  value={formData.leave}
-                  onChange={handleChange('leave')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>Professional Tax</Typography>
-                <TextField
-                  type="number"
-                  value={formData.profTax}
-                  onChange={handleChange('profTax')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-
-              <Box>
-                <Typography sx={{ fontWeight: '500', fontSize: '14px', color: '#121212' }}>Labour Welfare</Typography>
-                <TextField
-                  type="number"
-                  value={formData.labourWelfare}
-                  onChange={handleChange('labourWelfare')}
-                  placeholder="0"
-                  fullWidth
-                  sx={{ mt: 1, borderRadius: '10px', border: '1px solid #D0D0D0', '& .MuiInputBase-root': { height: '46px' } }}
-                />
-              </Box>
-            </Box>
-          </Grid>
-        </Grid>
-
-        {/* Calculated Net Salary Display */}
-        <Box
+        {/* Section 1: Staff Profile */}
+        <Card
           sx={{
-            mt: 4,
-            p: 2,
-            backgroundColor: '#F8F9FD',
-            borderRadius: '10px',
-            border: '1px solid #E0E0E0',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
+            mb: 3.5,
+            borderRadius: "16px",
+            border: "1px solid #E5E7EB",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
           }}
         >
-          <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-            Calculated Net Salary:
-          </Typography>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#004E69' }}>
-            ${calculateNetSalary().toLocaleString()}
-          </Typography>
-        </Box>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}>
+              <Box
+                sx={{
+                  p: 1,
+                  borderRadius: "10px",
+                  backgroundColor: "#F4F0FF",
+                  color: "#7B61FF",
+                  display: "flex",
+                }}
+              >
+                <PersonOutlineRounded />
+              </Box>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 800, color: "#111827", lineHeight: 1.2 }}>
+                  Staff Information
+                </Typography>
+                <Typography variant="caption" sx={{ color: "#6B7280" }}>
+                  Primary identification and employment attributes
+                </Typography>
+              </Box>
+            </Box>
 
-        {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 2, mt: 4, mb: 2 }}>
-          <Button
-            type="submit"
-            variant="contained"
-            sx={{
-              width: '200px',
-              height: '46px',
-              backgroundColor: '#004E69',
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontFamily: 'Lato',
-              fontWeight: '700',
-              fontSize: '14px',
-              color: '#ffffff',
-              '&:hover': { backgroundColor: '#003A4F' }
-            }}
-          >
-            Save Salary
-          </Button>
-          <Button
-            type="button"
-            variant="contained"
-            onClick={handleCancel}
-            sx={{
-              width: '130px',
-              height: '46px',
-              backgroundColor: '#004E69',
-              borderRadius: '10px',
-              textTransform: 'none',
-              fontFamily: 'Lato',
-              fontWeight: '700',
-              fontSize: '14px',
-              color: '#ffffff',
-              '&:hover': { backgroundColor: '#003A4F' }
-            }}
-          >
-            Cancel
-          </Button>
-        </Box>
+            <Grid container spacing={2.5}>
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                  Employee Name *
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  required
+                  placeholder="e.g. Alex Morgan"
+                  value={formData.name}
+                  onChange={handleChange("name")}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                  Employee ID *
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  required
+                  placeholder="e.g. FT-0012"
+                  value={formData.id}
+                  onChange={handleChange("id")}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                  Designation / Role *
+                </Typography>
+                <FormControl fullWidth size="small">
+                  <Select
+                    value={formData.role}
+                    onChange={handleChange("role")}
+                    sx={{ borderRadius: "10px", backgroundColor: "#F9FAFB" }}
+                  >
+                    {designations.map((role) => (
+                      <MenuItem key={role} value={role}>
+                        {role}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                  Official Email
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="email"
+                  placeholder="alex.m@cubeai.com"
+                  value={formData.email}
+                  onChange={handleChange("email")}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                  Mobile Number
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="9876543210"
+                  value={formData.mobile}
+                  onChange={handleChange("mobile")}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                />
+              </Grid>
+
+              <Grid item xs={12} sm={4}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                  Joining Date
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="date"
+                  value={formData.joinDate}
+                  onChange={handleChange("joinDate")}
+                  sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+
+        {/* Section 2: Compensation & Breakdown */}
+        <Grid container spacing={3.5} sx={{ mb: 3.5 }}>
+          {/* Earnings Box */}
+          <Grid item xs={12} md={6}>
+            <Card
+              sx={{
+                height: "100%",
+                borderRadius: "16px",
+                border: "1px solid #E5E7EB",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}>
+                  <Box
+                    sx={{
+                      p: 1,
+                      borderRadius: "10px",
+                      backgroundColor: "#F4F0FF",
+                      color: "#7B61FF",
+                      display: "flex",
+                    }}
+                  >
+                    <AccountBalanceWalletRounded />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: "#111827", lineHeight: 1.2 }}>
+                      Gross Earnings
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#6B7280" }}>
+                      Basic wages and regular salary allowances
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      Basic Salary (₹) *
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      required
+                      type="number"
+                      placeholder="e.g. 35000"
+                      value={formData.basic}
+                      onChange={handleChange("basic")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      DA (Dearness Allowance)
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 4000"
+                      value={formData.da}
+                      onChange={handleChange("da")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      HRA (House Rent)
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 5000"
+                      value={formData.hra}
+                      onChange={handleChange("hra")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      Conveyance Allowance
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 1500"
+                      value={formData.conveyance}
+                      onChange={handleChange("conveyance")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      Special Allowance
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 2000"
+                      value={formData.allowance}
+                      onChange={handleChange("allowance")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      Medical Allowance
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 1000"
+                      value={formData.medicalAllowance}
+                      onChange={handleChange("medicalAllowance")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      Other Earnings / Incentives
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 0"
+                      value={formData.earningsOthers}
+                      onChange={handleChange("earningsOthers")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Box sx={{ mt: 3, pt: 2, borderTop: "1px dashed #E5E7EB", display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#374151" }}>
+                    Total Gross Earnings:
+                  </Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#7B61FF" }}>
+                    ₹{grossEarnings.toLocaleString("en-IN")}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* Deductions Box */}
+          <Grid item xs={12} md={6}>
+            <Card
+              sx={{
+                height: "100%",
+                borderRadius: "16px",
+                border: "1px solid #E5E7EB",
+                boxShadow: "0 2px 10px rgba(0,0,0,0.02)",
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}>
+                  <Box
+                    sx={{
+                      p: 1,
+                      borderRadius: "10px",
+                      backgroundColor: "#FEF2F2",
+                      color: "#DC2626",
+                      display: "flex",
+                    }}
+                  >
+                    <ReceiptLongRounded />
+                  </Box>
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 800, color: "#111827", lineHeight: 1.2 }}>
+                      Statutory Deductions
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: "#6B7280" }}>
+                      Taxes, retirement funds, and compliance cuts
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      TDS (Tax Deducted at Source)
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 500"
+                      value={formData.tds}
+                      onChange={handleChange("tds")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      PF (Provident Fund)
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 1800"
+                      value={formData.pf}
+                      onChange={handleChange("pf")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      ESI (Health Insurance)
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 350"
+                      value={formData.esi}
+                      onChange={handleChange("esi")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      Professional Tax (Prof. Tax)
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 200"
+                      value={formData.profTax}
+                      onChange={handleChange("profTax")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      Leave Deductions
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 0"
+                      value={formData.leave}
+                      onChange={handleChange("leave")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12} sm={6}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      Labour Welfare Fund
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 50"
+                      value={formData.labourWelfare}
+                      onChange={handleChange("labourWelfare")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Typography variant="caption" sx={{ fontWeight: 700, color: "#374151", mb: 0.5, display: "block" }}>
+                      Other Deductions
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      type="number"
+                      placeholder="e.g. 0"
+                      value={formData.deductionsOthers}
+                      onChange={handleChange("deductionsOthers")}
+                      sx={{ "& .MuiOutlinedInput-root": { borderRadius: "10px", backgroundColor: "#F9FAFB" } }}
+                    />
+                  </Grid>
+                </Grid>
+
+                <Box sx={{ mt: 3, pt: 2, borderTop: "1px dashed #E5E7EB", display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "#374151" }}>
+                    Total Deductions:
+                  </Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 800, color: "#DC2626" }}>
+                    ₹{totalDeductions.toLocaleString("en-IN")}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Section 3: Live Take-Home Summary Card */}
+        <Card
+          sx={{
+            mb: 4,
+            borderRadius: "16px",
+            background: "linear-gradient(135deg, #FAF8FF 0%, #F4F0FF 100%)",
+            border: "1.5px solid #DDD6FE",
+            boxShadow: "0 4px 14px rgba(123, 97, 255, 0.08)",
+          }}
+        >
+          <CardContent sx={{ p: 3 }}>
+            <Grid container spacing={3} alignItems="center">
+              <Grid item xs={12} md={7}>
+                <Typography variant="caption" sx={{ color: "#7B61FF", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Live Net Remuneration Summary
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 900, color: "#7B61FF", mt: 0.5 }}>
+                  ₹{netSalary.toLocaleString("en-IN")}
+                  <Typography component="span" variant="body1" sx={{ color: "#6B7280", fontWeight: 600, ml: 1 }}>
+                    / month net take-home
+                  </Typography>
+                </Typography>
+                <Box sx={{ mt: 1.5, display: "flex", alignItems: "center", gap: 2 }}>
+                  <Typography variant="caption" sx={{ color: "#4B5563", fontWeight: 600 }}>
+                    Take-Home Ratio: {takeHomePercent}%
+                  </Typography>
+                  <Box sx={{ flexGrow: 1, maxWidth: 220 }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={takeHomePercent}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: "#E5E7EB",
+                        "& .MuiLinearProgress-bar": { backgroundColor: "#7B61FF", borderRadius: 4 },
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Grid>
+
+              <Grid item xs={12} md={5} sx={{ display: "flex", justifyContent: { xs: "flex-start", md: "flex-end" }, gap: 1.5 }}>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  onClick={() => navigate("/payroll")}
+                  sx={{
+                    borderRadius: "10px",
+                    borderColor: "#D1D5DB",
+                    color: "#4B5563",
+                    textTransform: "none",
+                    fontWeight: 600,
+                    px: 2.5,
+                    py: 1.2,
+                    "&:hover": { backgroundColor: "#F9FAFB" },
+                  }}
+                >
+                  Cancel
+                </Button>
+
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={submitting}
+                  startIcon={<SaveRounded />}
+                  sx={{
+                    borderRadius: "10px",
+                    backgroundColor: "#7B61FF",
+                    textTransform: "none",
+                    fontWeight: 700,
+                    fontSize: "0.95rem",
+                    px: 3.5,
+                    py: 1.2,
+                    boxShadow: "0 4px 14px rgba(123, 97, 255, 0.35)",
+                    "&:hover": { backgroundColor: "#624BCC" },
+                  }}
+                >
+                  {submitting ? "Saving..." : "Save Salary Record"}
+                </Button>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
       </Box>
 
-      {/* Success Modal */}
-      <Modal
+      {/* Compact Success Modal (< 400px) */}
+      <Dialog
         open={openModal}
         onClose={handleContinue}
-        aria-labelledby="modal-modal-title"
-        aria-describedby="modal-modal-description"
+        PaperProps={{
+          sx: {
+            width: "100%",
+            maxWidth: "380px",
+            borderRadius: "16px",
+            p: 1,
+            textAlign: "center",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.12)",
+          },
+        }}
       >
-        <Box sx={modalStyle}>
+        <DialogTitle sx={{ pb: 1, pt: 2.5 }}>
           <Box
-            component="img"
-            src={Img}
-            alt="Success"
-            sx={{ height: '180px', margin: '10px' }}
-          />
-          <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: '10px' }}>
-            <Typography variant="h5" fontWeight="bold">Congratulations</Typography>
-            <Typography sx={{ color: 'gray', mt: 1, textAlign: 'center' }}>
-              You have successfully saved the staff salary record.
-            </Typography>
+            sx={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              backgroundColor: "#ECFDF5",
+              color: "#10B981",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 12px auto",
+            }}
+          >
+            <CheckCircleRounded sx={{ fontSize: 32 }} />
           </Box>
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "#111827" }}>
+            Salary Record Saved!
+          </Typography>
+        </DialogTitle>
+
+        <DialogContent sx={{ px: 3, py: 1 }}>
+          <Typography variant="body2" sx={{ color: "#6B7280" }}>
+            Remuneration structure for <b style={{ color: "#111827" }}>{formData.name}</b> ({formData.id}) has been configured successfully.
+          </Typography>
+        </DialogContent>
+
+        <DialogActions sx={{ p: 2.5, pt: 2, display: "flex", gap: 1.5, justifyContent: "center" }}>
           <Button
             onClick={handleContinue}
             variant="contained"
+            fullWidth
             sx={{
-              color: 'white',
-              bgcolor: '#004E69',
-              margin: '10px',
-              textTransform: 'none',
-              borderRadius: '10px',
-              px: 4,
-              '&:hover': { bgcolor: '#003A4F' }
+              borderRadius: "10px",
+              backgroundColor: "#7B61FF",
+              color: "white",
+              textTransform: "none",
+              fontWeight: 600,
+              py: 1,
+              boxShadow: "0 4px 12px rgba(123, 97, 255, 0.3)",
+              "&:hover": { backgroundColor: "#624BCC" },
             }}
           >
-            Continue
+            Back to Payroll
           </Button>
-        </Box>
-      </Modal>
+        </DialogActions>
+      </Dialog>
     </GlobalFormLayout>
   );
 };

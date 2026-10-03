@@ -64,7 +64,6 @@ const App = () => {
           <Route path='/department' element={<AdminDepartmentView/>}/>
           <Route path="/report" element={<Report/>}/>
           <Route path="/user" element={<UserReport/>}/>
-          <Route path="/report" element={<Report/>}/>
           <Route path="/expense" element={<ExpenseReport/>}/>
           <Route path="/project" element={<ProjectReport/>}/>
           <Route path="/task" element={<TaskReport/>}/>

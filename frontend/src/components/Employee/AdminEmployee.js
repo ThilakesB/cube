@@ -269,7 +269,20 @@ const AdminEmployee = () => {
           {dialogContent}
         </Dialog>
         
-        <Dialog open={deleteOpen} onClose={handleCloseDialog} PaperProps={{ sx: { width: '75%', maxWidth: 'none', height: '542px', borderRadius: "25px", boxShadow: "5px 4px 50px 5px #3354F44D" } }}>
+        <Dialog 
+          open={deleteOpen} 
+          onClose={handleCloseDialog} 
+          PaperProps={{ 
+            sx: { 
+              width: '100%', 
+              maxWidth: '400px', 
+              borderRadius: '16px', 
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04)',
+              overflow: 'hidden',
+              mx: 2
+            } 
+          }}
+        >
           <DeleteEmployee selectedEmployee={selectedEmployee} onDelete={handleDeleteEmployee} onClose={handleCloseDialog}/>        
         </Dialog>
       </Layout>

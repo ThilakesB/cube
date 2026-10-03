@@ -274,3 +274,5 @@ class Appraisal(Base):
     status = Column(String, default="Pending")
     rating = Column(String, nullable=True)
     remarks = Column(Text, nullable=True)
+
+

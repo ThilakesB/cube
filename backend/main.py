@@ -278,33 +278,45 @@ def serialize_holiday(h: models.Holiday):
 
 @app.get("/api/holidays")
 def get_holidays(db: Session = Depends(get_db)):
-    holidays = db.query(models.Holiday).all()
+    holidays = db.query(models.Holiday).order_by(models.Holiday.date.asc()).all()
     serialized = [serialize_holiday(h) for h in holidays]
     return {"holidays": serialized}
 
 @app.post("/api/holidays")
 @app.post("/api/holidays/add")
 def create_holiday(holiday: schemas.HolidayCreate, db: Session = Depends(get_db)):
-    db_holiday = models.Holiday(
-        name=holiday.name,
-        date=holiday.date,
-        day=holiday.day or "",
-        type=holiday.type or "Public Holiday",
-        description=holiday.description or "",
-    )
-    db.add(db_holiday)
+    db_holiday = db.query(models.Holiday).filter(models.Holiday.name == holiday.name).first()
+    if db_holiday:
+        db_holiday.date = holiday.date
+        db_holiday.day = holiday.day or ""
+        db_holiday.type = holiday.type or "Public Holiday"
+        db_holiday.description = holiday.description or ""
+    else:
+        db_holiday = models.Holiday(
+            name=holiday.name,
+            date=holiday.date,
+            day=holiday.day or "",
+            type=holiday.type or "Public Holiday",
+            description=holiday.description or "",
+        )
+        db.add(db_holiday)
     db.commit()
     db.refresh(db_holiday)
     return {"status": "success", "holiday": serialize_holiday(db_holiday)}
 
 @app.delete("/api/holidays/{holiday_id}")
-def delete_holiday(holiday_id: int, db: Session = Depends(get_db)):
-    h = db.query(models.Holiday).filter(models.Holiday.id == holiday_id).first()
+def delete_holiday(holiday_id: str, db: Session = Depends(get_db)):
+    h = None
+    if holiday_id.isdigit():
+        h = db.query(models.Holiday).filter(models.Holiday.id == int(holiday_id)).first()
+    if not h:
+        h = db.query(models.Holiday).filter(models.Holiday.name == holiday_id).first()
     if not h:
         raise HTTPException(status_code=404, detail="Holiday not found")
     db.delete(h)
     db.commit()
     return {"status": "success", "message": "Holiday deleted"}
+
 
 from datetime import datetime
 
@@ -1315,3 +1327,4 @@ def delete_appraisal(appraisal_id: str, db: Session = Depends(get_db)):
     db.delete(a)
     db.commit()
     return {"status": "success"}
+
