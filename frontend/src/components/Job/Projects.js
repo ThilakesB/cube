@@ -7,10 +7,6 @@ import {
   Grid,
   Box,
   Container,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   Typography,
   Card,
@@ -18,9 +14,17 @@ import {
   CardActions,
   Chip,
   Divider,
-  IconButton,
+  LinearProgress,
+  Tabs,
+  Tab,
+  Tooltip,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
+import AssignmentIcon from "@mui/icons-material/Assignment";
+import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
+import EventNoteIcon from "@mui/icons-material/EventNote";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import PauseCircleOutlineIcon from "@mui/icons-material/PauseCircleOutline";
 import Navbar from "../Common_Bar/NavBar";
 import TopBar from "../Common_Bar/TopBar";
 import Sidebar from "../Common_Bar/Sidebar";
@@ -29,86 +33,11 @@ import { API_BASE_URL } from "../../config/api";
 const Projects = () => {
   const [showCreateProject, setShowCreateProject] = useState(true);
   const [activeComponent, setActiveComponent] = useState("project");
-  const [openPopup, setOpenPopup] = useState(false);
 
-  const [formData, setFormData] = useState({
-    projectName: "",
-    client: "",
-    startDate: "",
-    endDate: "",
-    rate: "",
-    priority: "",
-    projectLead: "",
-    teamMembers: "",
-    jobDescription: "",
-    files: null,
-  });
   const [storedProjects, setStoredProjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [filteredProjects, setFilteredProjects] = useState([]);
-
-  // Open/Close popup
-  const handleOpenPopup = () => {
-    setOpenPopup(true);
-  };
-
-  const handleClosePopup = () => {
-    setOpenPopup(false);
-    setFormData({
-      projectName: "",
-      client: "",
-      startDate: "",
-      endDate: "",
-      rate: "",
-      priority: "",
-      projectLead: "",
-      teamMembers: "",
-      jobDescription: "",
-      files: null,
-    });
-    setSearchTerm("");
-  };
-
-  // Handle form input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  // Handle file input changes
-  const handleFileChange = (e) => {
-    setFormData({ ...formData, files: e.target.files[0] });
-  };
-
-  // Save project details to backend and localStorage
-  const handleSave = async () => {
-    if (!formData.projectName || !formData.client) {
-      alert("Project Name and Client are required.");
-      return;
-    }
-
-    if (formData.files && formData.files.size > 5 * 1024 * 1024) {
-      alert("File size should be less than 5MB.");
-      return;
-    }
-
-    try {
-      await fetch(`${API_BASE_URL}/api/projects`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-    } catch (e) {
-      console.warn("Failed to save project to backend:", e);
-    }
-
-    const existingProjects = JSON.parse(localStorage.getItem("projectData")) || [];
-    const updatedProjects = [...existingProjects, formData];
-    localStorage.setItem("projectData", JSON.stringify(updatedProjects));
-
-    fetchProjects();
-    handleClosePopup();
-  };
 
   const fetchProjects = async () => {
     const storedData = JSON.parse(localStorage.getItem("projectData")) || [];
@@ -124,14 +53,56 @@ const Projects = () => {
         );
         const merged = [...apiProjects, ...uniqueLocal];
         setStoredProjects(merged);
-        setFilteredProjects(merged);
+        applyFilters(merged, searchTerm, statusFilter);
         return;
       }
     } catch (e) {
       console.warn("Could not fetch projects from backend:", e);
     }
     setStoredProjects(storedData);
-    setFilteredProjects(storedData);
+    applyFilters(storedData, searchTerm, statusFilter);
+  };
+
+  const applyFilters = (projects, search, status) => {
+    let result = [...projects];
+
+    if (status !== "ALL") {
+      result = result.filter((p) => {
+        const pStatus = (p.status || "Ongoing").toLowerCase();
+        if (status === "ONGOING") return pStatus === "ongoing" || pStatus === "active" || pStatus === "in progress";
+        if (status === "UPCOMING") return pStatus === "upcoming" || pStatus === "planned" || pStatus === "pipeline";
+        if (status === "COMPLETED") return pStatus === "completed" || pStatus === "done";
+        if (status === "ON_HOLD") return pStatus === "on hold" || pStatus === "paused" || pStatus === "in review";
+        return true;
+      });
+    }
+
+    if (search.trim()) {
+      const query = search.toLowerCase();
+      result = result.filter((p) => {
+        const name = (p.projectName || p.project_name || "").toLowerCase();
+        const client = (p.client || "").toLowerCase();
+        const lead = (p.projectLead || p.project_lead || "").toLowerCase();
+        const code = (p.projectCode || p.project_code || "").toLowerCase();
+        const cat = (p.category || "").toLowerCase();
+        return name.includes(query) || client.includes(query) || lead.includes(query) || code.includes(query) || cat.includes(query);
+      });
+    }
+
+    setFilteredProjects(result);
+  };
+
+  const handleSearchChange = (e) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+    applyFilters(storedProjects, term, statusFilter);
+  };
+
+  const handleStatusFilterChange = (event, newStatus) => {
+    if (newStatus !== null) {
+      setStatusFilter(newStatus);
+      applyFilters(storedProjects, searchTerm, newStatus);
+    }
   };
 
   // Delete project
@@ -145,18 +116,14 @@ const Projects = () => {
 
     try {
       if (projIdentifier) {
-        const response = await fetch(`${API_BASE_URL}/api/projects/${encodeURIComponent(projIdentifier)}`, {
+        await fetch(`${API_BASE_URL}/api/projects/${encodeURIComponent(projIdentifier)}`, {
           method: "DELETE",
         });
-        if (!response.ok) {
-          console.warn("Backend delete response not ok, cleaning local state");
-        }
       }
     } catch (e) {
       console.warn("Error deleting project from backend:", e);
     }
 
-    // Remove from localStorage
     const existing = JSON.parse(localStorage.getItem("projectData")) || [];
     const updated = existing.filter(
       (p) => (p.projectName || p.project_name || "") !== projName
@@ -166,24 +133,28 @@ const Projects = () => {
     fetchProjects();
   };
 
-  // Load projects on component mount
   useEffect(() => {
     fetchProjects();
   }, []);
 
-  // Filter projects based on search term
-  const handleSearch = () => {
-    if (searchTerm === "") {
-      setFilteredProjects(storedProjects);
-    } else {
-      const filtered = storedProjects.filter((project) =>
-        (project.projectName || project.project_name || "")
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())
-      );
-      setFilteredProjects(filtered);
-    }
-  };
+  // Compute KPI summary metrics
+  const totalCount = storedProjects.length;
+  const ongoingCount = storedProjects.filter((p) => {
+    const s = (p.status || "Ongoing").toLowerCase();
+    return s === "ongoing" || s === "active" || s === "in progress";
+  }).length;
+  const upcomingCount = storedProjects.filter((p) => {
+    const s = (p.status || "").toLowerCase();
+    return s === "upcoming" || s === "planned" || s === "pipeline";
+  }).length;
+  const completedCount = storedProjects.filter((p) => {
+    const s = (p.status || "").toLowerCase();
+    return s === "completed" || s === "done";
+  }).length;
+  const onHoldCount = storedProjects.filter((p) => {
+    const s = (p.status || "").toLowerCase();
+    return s === "on hold" || s === "paused" || s === "in review";
+  }).length;
 
   const handleTaskViewClick = () => {
     setShowCreateProject(false);
@@ -214,15 +185,7 @@ const Projects = () => {
 
       <Grid container>
         {/* Sidebar */}
-        <Grid
-          item
-          xs={12}
-          sm={3}
-          md={2}
-          sx={{
-            display: "flex",
-          }}
-        >
+        <Grid item xs={12} sm={3} md={2} sx={{ display: "flex" }}>
           <Sidebar />
         </Grid>
 
@@ -238,10 +201,10 @@ const Projects = () => {
             backgroundColor: "#f9fafb",
           }}
         >
-          <Container maxWidth="lg">
-            <Box sx={{ paddingY: 2 }}>
-              {/* Navigation Buttons */}
-              <Grid container spacing={2} justifyContent="flex-start">
+          <Container maxWidth="xl">
+            <Box sx={{ paddingY: 1 }}>
+              {/* Navigation Header Tabs */}
+              <Grid container spacing={2} justifyContent="flex-start" sx={{ mb: 3 }}>
                 <Grid item xs={12} sm={4} md={3}>
                   <Button
                     variant="contained"
@@ -251,9 +214,13 @@ const Projects = () => {
                       backgroundColor: showCreateProject && activeComponent === "project" ? "#004E69" : "white",
                       color: showCreateProject && activeComponent === "project" ? "white" : "black",
                       fontWeight: "bold",
+                      height: "44px",
+                      borderRadius: "8px",
+                      border: "1px solid #E2E8F0",
+                      "&:hover": { backgroundColor: "#004E69", color: "white" }
                     }}
                   >
-                    Projects
+                    Projects Dashboard
                   </Button>
                 </Grid>
                 <Grid item xs={12} sm={4} md={3}>
@@ -264,6 +231,10 @@ const Projects = () => {
                       backgroundColor: activeComponent === "taskView" ? "#004E69" : "white",
                       color: activeComponent === "taskView" ? "white" : "black",
                       fontWeight: "bold",
+                      height: "44px",
+                      borderRadius: "8px",
+                      border: "1px solid #E2E8F0",
+                      "&:hover": { backgroundColor: "#004E69", color: "white" }
                     }}
                     onClick={handleTaskViewClick}
                   >
@@ -278,10 +249,10 @@ const Projects = () => {
                       backgroundColor: activeComponent === "taskBoard" ? "#004E69" : "white",
                       color: activeComponent === "taskBoard" ? "white" : "black",
                       fontWeight: "bold",
-                      "&:hover": {
-                        backgroundColor: "#004E69",
-                        color: "white",
-                      },
+                      height: "44px",
+                      borderRadius: "8px",
+                      border: "1px solid #E2E8F0",
+                      "&:hover": { backgroundColor: "#004E69", color: "white" }
                     }}
                     onClick={handleTaskboard}
                   >
@@ -290,161 +261,300 @@ const Projects = () => {
                 </Grid>
               </Grid>
 
-              {/* Project Section */}
+              {/* Project Dashboard Section */}
               {showCreateProject && activeComponent === "project" && (
                 <>
+                  {/* Top Bar with Title & Create Button */}
                   <Box
                     sx={{
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      marginTop: 3,
+                      mb: 3,
                     }}
                   >
                     <Box>
-                      <Typography variant="h5" fontWeight="bold" color="#333">
-                        Projects
+                      <Typography variant="h5" fontWeight="bold" color="#1e293b">
+                        Project Management Dashboard
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Dashboard / Projects
+                        Track active project durations, upcoming deliveries, milestones & budgets
                       </Typography>
                     </Box>
                     <Button
                       component={Link}
                       to="/addproject"
                       variant="contained"
-                      startIcon={
-                        <span style={{ fontSize: "18px", fontWeight: "bold" }}>+</span>
-                      }
+                      startIcon={<span style={{ fontSize: "18px", fontWeight: "bold" }}>+</span>}
                       sx={{
                         backgroundColor: "#FF902F",
-                        borderRadius: "50px",
-                        "&:hover": {
-                          backgroundColor: "#e07d24",
-                        },
+                        borderRadius: "8px",
+                        "&:hover": { backgroundColor: "#e07d24" },
                         color: "white",
                         textTransform: "none",
                         fontWeight: "bold",
                         px: 3,
+                        height: "44px"
                       }}
                     >
-                      Create Project
+                      + Create New Project
                     </Button>
                   </Box>
 
-                  {/* Search Section */}
-                  <Box sx={{ display: "flex", gap: 2, marginTop: 3 }}>
-                    <TextField
-                      placeholder="Search by Project Name..."
-                      fullWidth
-                      size="small"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <Button
-                      variant="contained"
-                      sx={{
-                        backgroundColor: "#55CE63",
-                        minWidth: "140px",
-                        fontWeight: "bold",
-                        "&:hover": {
-                          backgroundColor: "#46b653",
-                        },
-                      }}
-                      onClick={handleSearch}
-                    >
-                      SEARCH
-                    </Button>
-                  </Box>
+                  {/* KPI Summary Cards */}
+                  <Grid container spacing={2.5} sx={{ mb: 3 }}>
+                    {/* Total */}
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Card sx={{ borderRadius: "12px", border: "1px solid #E2E8F0", boxShadow: "none", p: 2 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" fontWeight="600">TOTAL PROJECTS</Typography>
+                            <Typography variant="h4" fontWeight="bold" color="#004E69">{totalCount}</Typography>
+                          </Box>
+                          <AssignmentIcon sx={{ color: "#004E69", fontSize: "36px", opacity: 0.8 }} />
+                        </Box>
+                      </Card>
+                    </Grid>
 
-                  {/* Projects Grid Display */}
-                  <Box sx={{ marginTop: 4 }}>
-                    <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2, color: "#1e293b" }}>
-                      Projects ({filteredProjects.length})
+                    {/* Ongoing */}
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Card sx={{ borderRadius: "12px", border: "1px solid #BAE6FD", bgcolor: "#F0F9FF", boxShadow: "none", p: 2 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <Box>
+                            <Typography variant="caption" color="#0369A1" fontWeight="700">ONGOING / ACTIVE</Typography>
+                            <Typography variant="h4" fontWeight="bold" color="#0284C7">{ongoingCount}</Typography>
+                          </Box>
+                          <PlayCircleOutlineIcon sx={{ color: "#0284C7", fontSize: "36px" }} />
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* Upcoming */}
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Card sx={{ borderRadius: "12px", border: "1px solid #FED7AA", bgcolor: "#FFF7ED", boxShadow: "none", p: 2 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <Box>
+                            <Typography variant="caption" color="#C2410C" fontWeight="700">UPCOMING PIPELINE</Typography>
+                            <Typography variant="h4" fontWeight="bold" color="#EA580C">{upcomingCount}</Typography>
+                          </Box>
+                          <EventNoteIcon sx={{ color: "#EA580C", fontSize: "36px" }} />
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* Completed */}
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Card sx={{ borderRadius: "12px", border: "1px solid #BBF7D0", bgcolor: "#F0FDF4", boxShadow: "none", p: 2 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <Box>
+                            <Typography variant="caption" color="#15803D" fontWeight="700">COMPLETED</Typography>
+                            <Typography variant="h4" fontWeight="bold" color="#16A34A">{completedCount}</Typography>
+                          </Box>
+                          <CheckCircleOutlineIcon sx={{ color: "#16A34A", fontSize: "36px" }} />
+                        </Box>
+                      </Card>
+                    </Grid>
+
+                    {/* On Hold */}
+                    <Grid item xs={12} sm={6} md={2.4}>
+                      <Card sx={{ borderRadius: "12px", border: "1px solid #FEF08A", bgcolor: "#FEFCE8", boxShadow: "none", p: 2 }}>
+                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <Box>
+                            <Typography variant="caption" color="#A16207" fontWeight="700">ON HOLD / REVIEW</Typography>
+                            <Typography variant="h4" fontWeight="bold" color="#CA8A04">{onHoldCount}</Typography>
+                          </Box>
+                          <PauseCircleOutlineIcon sx={{ color: "#CA8A04", fontSize: "36px" }} />
+                        </Box>
+                      </Card>
+                    </Grid>
+                  </Grid>
+
+                  {/* Filter Tabs & Search Bar */}
+                  <Card sx={{ mb: 3.5, borderRadius: "12px", border: "1px solid #E2E8F0", boxShadow: "none" }}>
+                    <CardContent sx={{ p: 2 }}>
+                      <Grid container spacing={2} alignItems="center">
+                        <Grid item xs={12} md={7}>
+                          <Tabs
+                            value={statusFilter}
+                            onChange={handleStatusFilterChange}
+                            variant="scrollable"
+                            scrollButtons="auto"
+                            sx={{
+                              "& .MuiTab-root": { textTransform: "none", fontWeight: 600, fontSize: "14px", minWidth: "100px" },
+                              "& .Mui-selected": { color: "#004E69" },
+                              "& .MuiTabs-indicator": { backgroundColor: "#004E69", height: 3 }
+                            }}
+                          >
+                            <Tab label={`All (${totalCount})`} value="ALL" />
+                            <Tab label={`Ongoing (${ongoingCount})`} value="ONGOING" />
+                            <Tab label={`Upcoming (${upcomingCount})`} value="UPCOMING" />
+                            <Tab label={`Completed (${completedCount})`} value="COMPLETED" />
+                            <Tab label={`On Hold (${onHoldCount})`} value="ON_HOLD" />
+                          </Tabs>
+                        </Grid>
+                        <Grid item xs={12} md={5}>
+                          <TextField
+                            placeholder="Search by Project, Code, Client or Lead..."
+                            fullWidth
+                            size="small"
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            sx={{
+                              bgcolor: "#fff",
+                              "& .MuiOutlinedInput-root": { borderRadius: "8px" }
+                            }}
+                          />
+                        </Grid>
+                      </Grid>
+                    </CardContent>
+                  </Card>
+
+                  {/* Projects List Grid */}
+                  <Box sx={{ mb: 4 }}>
+                    <Typography variant="h6" sx={{ fontWeight: "700", mb: 2.5, color: "#1e293b" }}>
+                      Projects Catalog ({filteredProjects.length})
                     </Typography>
 
                     {filteredProjects.length > 0 ? (
                       <Grid container spacing={3}>
                         {filteredProjects.map((project, idx) => {
                           const pName = project.projectName || project.project_name || "Untitled Project";
+                          const pCode = project.projectCode || project.project_code || `PRJ-${project.id || idx + 1}`;
                           const client = project.client || "Data Not Available";
+                          const clientEmail = project.clientEmail || project.client_email;
+                          const category = project.category || "Software Development";
                           const sDate = project.startDate || project.start_date || "Data Not Available";
                           const eDate = project.endDate || project.end_date || "Data Not Available";
+                          const duration = project.duration || "Data Not Available";
+                          const budget = project.budget || "Data Not Available";
                           const priority = project.priority || "Medium";
                           const lead = project.projectLead || project.project_lead || "Data Not Available";
                           const members = project.teamMembers || project.team_members || "Data Not Available";
                           const rate = project.rate || "Data Not Available";
-                          const status = project.status || "Active";
+                          const status = project.status || "Ongoing";
+                          const progress = project.progress !== undefined ? project.progress : 0;
                           const desc = project.jobDescription || project.job_description || "Data Not Available";
+
+                          // Color based on status
+                          let statusBg = "#E0F2FE";
+                          let statusColor = "#0369A1";
+                          if (status.toLowerCase() === "ongoing" || status.toLowerCase() === "active") {
+                            statusBg = "#E0F2FE";
+                            statusColor = "#0284C7";
+                          } else if (status.toLowerCase() === "upcoming") {
+                            statusBg = "#FFF7ED";
+                            statusColor = "#EA580C";
+                          } else if (status.toLowerCase() === "completed") {
+                            statusBg = "#DCFCE7";
+                            statusColor = "#15803D";
+                          } else if (status.toLowerCase() === "on hold") {
+                            statusBg = "#FEF9C3";
+                            statusColor = "#A16207";
+                          }
 
                           return (
                             <Grid item xs={12} md={6} lg={4} key={project.id || idx}>
                               <Card
-                                elevation={2}
+                                elevation={0}
                                 sx={{
-                                  borderRadius: "12px",
-                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "14px",
+                                  border: "1px solid #E2E8F0",
                                   display: "flex",
                                   flexDirection: "column",
                                   height: "100%",
+                                  backgroundColor: "#ffffff",
                                   transition: "transform 0.2s, box-shadow 0.2s",
                                   "&:hover": {
-                                    transform: "translateY(-3px)",
-                                    boxShadow: 4,
+                                    transform: "translateY(-4px)",
+                                    boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.08)",
+                                    borderColor: "#CBD5E1"
                                   },
                                 }}
                               >
-                                <CardContent sx={{ flexGrow: 1 }}>
-                                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1.5 }}>
-                                    <Typography variant="h6" fontWeight="bold" color="#004E69">
-                                      {pName}
-                                    </Typography>
+                                <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
+                                  {/* Header: Project Name & Code */}
+                                  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+                                    <Box>
+                                      <Chip
+                                        label={pCode}
+                                        size="small"
+                                        sx={{ bgcolor: "#F1F5F9", color: "#475569", fontWeight: 700, fontSize: "11px", mb: 0.5 }}
+                                      />
+                                      <Typography variant="h6" fontWeight="700" sx={{ color: "#004E69", lineHeight: 1.3 }}>
+                                        {pName}
+                                      </Typography>
+                                    </Box>
                                     <Chip
                                       label={status}
                                       size="small"
                                       sx={{
-                                        backgroundColor: status.toLowerCase() === "active" ? "#e6f4ea" : "#fef3c7",
-                                        color: status.toLowerCase() === "active" ? "#137333" : "#b45309",
-                                        fontWeight: "bold",
+                                        backgroundColor: statusBg,
+                                        color: statusColor,
+                                        fontWeight: "700",
+                                        fontSize: "12px",
+                                        borderRadius: "6px"
                                       }}
                                     />
                                   </Box>
 
-                                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    Client: <strong>{client}</strong>
+                                  <Typography variant="caption" sx={{ color: "#64748B", display: "block", mb: 1.5 }}>
+                                    {category} • Client: <strong>{client}</strong>
+                                    {clientEmail && ` (${clientEmail})`}
                                   </Typography>
+
+                                  {/* Progress Bar */}
+                                  <Box sx={{ mb: 2, p: 1.5, bgcolor: "#F8FAFC", borderRadius: "8px", border: "1px solid #F1F5F9" }}>
+                                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 0.5 }}>
+                                      <Typography variant="caption" fontWeight="600" color="#475569">Progress & Completion</Typography>
+                                      <Typography variant="caption" fontWeight="700" color="#004E69">{progress}%</Typography>
+                                    </Box>
+                                    <LinearProgress
+                                      variant="determinate"
+                                      value={progress}
+                                      sx={{
+                                        height: 7,
+                                        borderRadius: 4,
+                                        bgcolor: "#E2E8F0",
+                                        "& .MuiLinearProgress-bar": {
+                                          bgcolor: progress === 100 ? "#16A34A" : progress > 50 ? "#0284C7" : "#FF902F",
+                                          borderRadius: 4
+                                        }
+                                      }}
+                                    />
+                                  </Box>
 
                                   <Divider sx={{ mb: 2 }} />
 
-                                  <Grid container spacing={1} sx={{ fontSize: "0.85rem" }}>
+                                  {/* Project Metadata Grid */}
+                                  <Grid container spacing={1.5} sx={{ fontSize: "0.85rem" }}>
                                     <Grid item xs={6}>
-                                      <Typography variant="caption" color="text.secondary">Start Date</Typography>
-                                      <Typography variant="body2" fontWeight="500">{sDate}</Typography>
+                                      <Typography variant="caption" color="text.secondary" display="block">Timeline Duration</Typography>
+                                      <Typography variant="body2" fontWeight="600" color="#1e293b">
+                                        {duration !== "Data Not Available" ? duration : `${sDate} → ${eDate}`}
+                                      </Typography>
                                     </Grid>
                                     <Grid item xs={6}>
-                                      <Typography variant="caption" color="text.secondary">End Date</Typography>
-                                      <Typography variant="body2" fontWeight="500">{eDate}</Typography>
+                                      <Typography variant="caption" color="text.secondary" display="block">Priority & Budget</Typography>
+                                      <Typography variant="body2" fontWeight="600" color="#1e293b">
+                                        {priority} • {budget !== "Data Not Available" ? budget : rate}
+                                      </Typography>
                                     </Grid>
-                                    <Grid item xs={6} sx={{ mt: 1 }}>
-                                      <Typography variant="caption" color="text.secondary">Priority</Typography>
-                                      <Typography variant="body2" fontWeight="500">{priority}</Typography>
+                                    <Grid item xs={6} sx={{ mt: 0.5 }}>
+                                      <Typography variant="caption" color="text.secondary" display="block">Project Lead</Typography>
+                                      <Typography variant="body2" fontWeight="600" color="#004E69">{lead}</Typography>
                                     </Grid>
-                                    <Grid item xs={6} sx={{ mt: 1 }}>
-                                      <Typography variant="caption" color="text.secondary">Rate</Typography>
-                                      <Typography variant="body2" fontWeight="500">{rate}</Typography>
-                                    </Grid>
-                                    <Grid item xs={12} sx={{ mt: 1 }}>
-                                      <Typography variant="caption" color="text.secondary">Project Lead</Typography>
-                                      <Typography variant="body2" fontWeight="500">{lead}</Typography>
-                                    </Grid>
-                                    <Grid item xs={12} sx={{ mt: 1 }}>
-                                      <Typography variant="caption" color="text.secondary">Team Members</Typography>
-                                      <Typography variant="body2" fontWeight="500">{members}</Typography>
+                                    <Grid item xs={6} sx={{ mt: 0.5 }}>
+                                      <Typography variant="caption" color="text.secondary" display="block">Team Members</Typography>
+                                      <Tooltip title={members} arrow>
+                                        <Typography variant="body2" fontWeight="500" color="#334155" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                          {members}
+                                        </Typography>
+                                      </Tooltip>
                                     </Grid>
                                     {desc !== "Data Not Available" && (
-                                      <Grid item xs={12} sx={{ mt: 1 }}>
-                                        <Typography variant="caption" color="text.secondary">Description</Typography>
-                                        <Typography variant="body2" color="text.secondary" sx={{ maxHeight: "60px", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                      <Grid item xs={12} sx={{ mt: 0.5 }}>
+                                        <Typography variant="caption" color="text.secondary" display="block">Scope & Deliverables</Typography>
+                                        <Typography variant="body2" color="text.secondary" sx={{ maxHeight: "40px", overflow: "hidden", textOverflow: "ellipsis" }}>
                                           {desc}
                                         </Typography>
                                       </Grid>
@@ -454,7 +564,10 @@ const Projects = () => {
 
                                 <Divider />
 
-                                <CardActions sx={{ justifyContent: "flex-end", p: 1.5, backgroundColor: "#f8fafc" }}>
+                                <CardActions sx={{ justifyContent: "space-between", px: 2.5, py: 1.5, backgroundColor: "#FAFAFA" }}>
+                                  <Typography variant="caption" color="text.secondary">
+                                    Target: <strong>{eDate}</strong>
+                                  </Typography>
                                   <Button
                                     variant="outlined"
                                     color="error"
@@ -463,8 +576,10 @@ const Projects = () => {
                                     onClick={() => handleDeleteProject(project)}
                                     sx={{
                                       textTransform: "none",
-                                      fontWeight: "bold",
+                                      fontWeight: "700",
                                       borderRadius: "6px",
+                                      px: 1.5,
+                                      py: 0.5
                                     }}
                                   >
                                     Delete
@@ -476,116 +591,24 @@ const Projects = () => {
                         })}
                       </Grid>
                     ) : (
-                      <Box sx={{ p: 4, textAlign: "center", backgroundColor: "white", borderRadius: "10px", border: "1px dashed #cbd5e1" }}>
-                        <Typography color="text.secondary">
-                          No projects found. Click <strong>+ Create Project</strong> to add one.
+                      <Box sx={{ p: 6, textAlign: "center", backgroundColor: "white", borderRadius: "12px", border: "1px dashed #cbd5e1" }}>
+                        <Typography color="text.secondary" sx={{ mb: 2, fontSize: "15px" }}>
+                          No projects found matching the filter criteria.
                         </Typography>
+                        <Button
+                          component={Link}
+                          to="/addproject"
+                          variant="contained"
+                          sx={{ backgroundColor: "#004E69", '&:hover': { backgroundColor: "#003A4F" }, textTransform: "none" }}
+                        >
+                          + Create New Project
+                        </Button>
                       </Box>
                     )}
                   </Box>
                 </>
               )}
             </Box>
-
-            {/* Create Project Dialog */}
-            <Dialog open={openPopup} onClose={handleClosePopup} fullWidth maxWidth="md">
-              <DialogTitle>Create Project</DialogTitle>
-              <DialogContent>
-                <Box component="form" sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-                  <TextField
-                    name="projectName"
-                    label="Project Name"
-                    fullWidth
-                    value={formData.projectName}
-                    onChange={handleInputChange}
-                  />
-                  <TextField
-                    name="client"
-                    label="Client"
-                    fullWidth
-                    value={formData.client}
-                    onChange={handleInputChange}
-                  />
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        name="startDate"
-                        label="Start Date"
-                        type="date"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        value={formData.startDate}
-                        onChange={handleInputChange}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        name="endDate"
-                        label="End Date"
-                        type="date"
-                        fullWidth
-                        InputLabelProps={{ shrink: true }}
-                        value={formData.endDate}
-                        onChange={handleInputChange}
-                      />
-                    </Grid>
-                  </Grid>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        name="rate"
-                        label="Rate"
-                        fullWidth
-                        value={formData.rate}
-                        onChange={handleInputChange}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <TextField
-                        name="priority"
-                        label="Priority"
-                        fullWidth
-                        value={formData.priority}
-                        onChange={handleInputChange}
-                      />
-                    </Grid>
-                  </Grid>
-                  <TextField
-                    name="projectLead"
-                    label="Project Lead"
-                    fullWidth
-                    value={formData.projectLead}
-                    onChange={handleInputChange}
-                  />
-                  <TextField
-                    name="teamMembers"
-                    label="Team Members"
-                    fullWidth
-                    value={formData.teamMembers}
-                    onChange={handleInputChange}
-                  />
-                  <TextField
-                    name="jobDescription"
-                    label="Job Description"
-                    multiline
-                    rows={4}
-                    fullWidth
-                    value={formData.jobDescription}
-                    onChange={handleInputChange}
-                  />
-                  <Button variant="outlined" component="label">
-                    Upload Files
-                    <input type="file" hidden onChange={handleFileChange} />
-                  </Button>
-                </Box>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={handleClosePopup}>Cancel</Button>
-                <Button onClick={handleSave} variant="contained" color="primary">
-                  Save
-                </Button>
-              </DialogActions>
-            </Dialog>
 
             {/* TaskView Section */}
             {activeComponent === "taskView" && <TaskView />}

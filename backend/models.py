@@ -22,14 +22,20 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     project_name = Column(String, index=True)
+    project_code = Column(String, nullable=True)
     client = Column(String)
+    client_email = Column(String, nullable=True)
+    category = Column(String, nullable=True)
     start_date = Column(String, nullable=True)
     end_date = Column(String, nullable=True)
+    duration = Column(String, nullable=True)
+    budget = Column(String, nullable=True)
     rate = Column(String, nullable=True)
     priority = Column(String, default="Medium")
     project_lead = Column(String, nullable=True)
     team_members = Column(String, nullable=True)
-    status = Column(String, default="Active")
+    status = Column(String, default="Ongoing")
+    progress = Column(Integer, default=0)
     job_description = Column(Text, nullable=True)
 
 class Salary(Base):

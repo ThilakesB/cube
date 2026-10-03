@@ -97,20 +97,28 @@ def serialize_project(proj: models.Project):
         "id": proj.id,
         "projectName": proj.project_name,
         "project_name": proj.project_name,
+        "projectCode": proj.project_code or f"PRJ-{proj.id:04d}",
+        "project_code": proj.project_code or f"PRJ-{proj.id:04d}",
         "client": proj.client,
+        "clientEmail": proj.client_email or "",
+        "client_email": proj.client_email or "",
+        "category": proj.category or "Software Development",
         "startDate": proj.start_date,
         "start_date": proj.start_date,
         "endDate": proj.end_date,
         "end_date": proj.end_date,
-        "rate": proj.rate,
-        "priority": proj.priority,
-        "projectLead": proj.project_lead,
-        "project_lead": proj.project_lead,
-        "teamMembers": proj.team_members,
-        "team_members": proj.team_members,
-        "status": proj.status,
-        "jobDescription": proj.job_description,
-        "job_description": proj.job_description,
+        "duration": proj.duration or "",
+        "budget": proj.budget or "",
+        "rate": proj.rate or "",
+        "priority": proj.priority or "Medium",
+        "projectLead": proj.project_lead or "",
+        "project_lead": proj.project_lead or "",
+        "teamMembers": proj.team_members or "",
+        "team_members": proj.team_members or "",
+        "status": proj.status or "Ongoing",
+        "progress": proj.progress if proj.progress is not None else 0,
+        "jobDescription": proj.job_description or "",
+        "job_description": proj.job_description or "",
     }
 
 @app.get("/api/projects", response_model=List[dict])
@@ -121,22 +129,35 @@ def get_projects(db: Session = Depends(get_db)):
 @app.post("/api/projects", response_model=dict)
 def create_project(project: schemas.ProjectCreate, db: Session = Depends(get_db)):
     p_name = project.projectName or project.project_name or "Untitled Project"
-    s_date = project.startDate or project.start_date
-    e_date = project.endDate or project.end_date
-    p_lead = project.projectLead or project.project_lead
-    t_members = project.teamMembers or project.team_members
-    j_desc = project.jobDescription or project.job_description
+    p_code = project.projectCode or project.project_code or ""
+    c_email = project.clientEmail or project.client_email or ""
+    cat = project.category or "Software Development"
+    s_date = project.startDate or project.start_date or ""
+    e_date = project.endDate or project.end_date or ""
+    dur = project.duration or ""
+    bud = project.budget or ""
+    p_lead = project.projectLead or project.project_lead or ""
+    t_members = project.teamMembers or project.team_members or ""
+    stat = project.status or "Ongoing"
+    prog = project.progress or 0
+    j_desc = project.jobDescription or project.job_description or ""
 
     db_project = models.Project(
         project_name=p_name,
+        project_code=p_code,
         client=project.client,
+        client_email=c_email,
+        category=cat,
         start_date=s_date,
         end_date=e_date,
-        rate=project.rate,
+        duration=dur,
+        budget=bud,
+        rate=project.rate or "",
         priority=project.priority or "Medium",
         project_lead=p_lead,
         team_members=t_members,
-        status=project.status or "Active",
+        status=stat,
+        progress=prog,
         job_description=j_desc,
     )
     db.add(db_project)

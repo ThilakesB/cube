@@ -28,36 +28,31 @@ class Employee(EmployeeBase):
 class ProjectBase(BaseModel):
     projectName: Optional[str] = None
     project_name: Optional[str] = None
+    projectCode: Optional[str] = None
+    project_code: Optional[str] = None
     client: str
+    clientEmail: Optional[str] = ""
+    client_email: Optional[str] = ""
+    category: Optional[str] = "Software Development"
     startDate: Optional[str] = None
     start_date: Optional[str] = None
     endDate: Optional[str] = None
     end_date: Optional[str] = None
+    duration: Optional[str] = ""
+    budget: Optional[str] = ""
     rate: Optional[str] = None
     priority: Optional[str] = "Medium"
     projectLead: Optional[str] = None
     project_lead: Optional[str] = None
     teamMembers: Optional[str] = None
     team_members: Optional[str] = None
-    status: Optional[str] = "Active"
+    status: Optional[str] = "Ongoing"
+    progress: Optional[int] = 0
     jobDescription: Optional[str] = None
     job_description: Optional[str] = None
 
 class ProjectCreate(ProjectBase):
     pass
-
-class ProjectOut(BaseModel):
-    id: int
-    projectName: str
-    client: str
-    startDate: Optional[str] = None
-    endDate: Optional[str] = None
-    rate: Optional[str] = None
-    priority: Optional[str] = "Medium"
-    projectLead: Optional[str] = None
-    teamMembers: Optional[str] = None
-    status: Optional[str] = "Active"
-    jobDescription: Optional[str] = None
 
 # Salary Schemas
 class SalaryBase(BaseModel):
