@@ -55,7 +55,7 @@ const TrainerList = () => {
   const fetchTrainers = async () => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       console.log('Fetching trainers from:', `${API_URL}/api/trainers`);
       
       const response = await fetch(`${API_URL}/api/trainers`);
@@ -92,7 +92,7 @@ const TrainerList = () => {
   const fetchTrainings = async () => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       console.log('Fetching trainings from:', `${API_URL}/api/trainings`);
       
       const response = await fetch(`${API_URL}/api/trainings`);
@@ -170,7 +170,7 @@ const TrainerList = () => {
     setError("");
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       let endpoint = '';
       let payload = {};
 

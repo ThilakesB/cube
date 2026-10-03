@@ -26,6 +26,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { API_BASE_URL } from '../../config/api';
 
 
 const BudgetRevenue = () => {
@@ -37,16 +38,22 @@ const BudgetRevenue = () => {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
 
-  // Load data from localStorage
-  useEffect(() => {
-    const storedData = JSON.parse(localStorage.getItem("budgetData")) || [];
-    setBudgetData(storedData);
-  }, []);
+  // Fetch data from backend
+  const fetchRevenues = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/budget-revenues`);
+      if (response.ok) {
+        const data = await response.json();
+        setBudgetData(data.revenues || []);
+      }
+    } catch (error) {
+      console.error('Error fetching budget revenues:', error);
+    }
+  };
 
-  // Save data to localStorage
   useEffect(() => {
-    localStorage.setItem("budgetData", JSON.stringify(budgetData));
-  }, [budgetData]);
+    fetchRevenues();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -63,9 +70,33 @@ const BudgetRevenue = () => {
     setFormData({});
   };
 
-  const handleSave = () => {
-    setBudgetData((prevData) => [...prevData, formData]);
+  const handleSave = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/budget-revenues/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (response.ok) {
+        await fetchRevenues();
+      }
+    } catch (error) {
+      console.error('Error saving budget revenue:', error);
+    }
     handleClosePopup();
+  };
+
+  const handleDelete = async (id, index) => {
+    if (id) {
+      try {
+        await fetch(`${API_BASE_URL}/api/budget-revenues/${id}`, { method: 'DELETE' });
+        await fetchRevenues();
+      } catch (error) {
+        console.error('Error deleting budget revenue:', error);
+      }
+    } else {
+      setBudgetData(budgetData.filter((_, i) => i !== index));
+    }
   };
   const handleFileChange = (event) => {
     const file = event.target.files[0]; // Access the selected file
@@ -128,9 +159,7 @@ const BudgetRevenue = () => {
                   <TableCell>
                     <Button
                       color="secondary"
-                      onClick={() =>
-                        setBudgetData(budgetData.filter((_, i) => i !== index))
-                      }
+                      onClick={() => handleDelete(data.id || data._id, index)}
                     >
                       Delete
                     </Button>

@@ -93,7 +93,7 @@ const Resume = () => {
   const fetchResumes = async () => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       const response = await fetch(`${API_URL}/api/resumes`);
       
       if (!response.ok) {
@@ -218,7 +218,7 @@ const Resume = () => {
 
   const addResumeToDatabase = async (formData) => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || "http://3.108.223.238:5000";
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
       const endpoint = `${API_URL}/api/resumes/add`;
 
       const response = await fetch(endpoint, {

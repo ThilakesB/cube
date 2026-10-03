@@ -8,43 +8,12 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import Sidebar from '../Common_Bar/Sidebar';
 import TopBar from '../Common_Bar/TopBar';
 import Navbar from '../Common_Bar/NavBar';
-const attendanceData = [
-    { id: 1, empName: 'John Doe', empCode: 'E123', inTime: '9:30 AM 5 Nov 2024', outTime: '6:00 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 2, empName: 'Jane Smith', empCode: 'E124', inTime: '9:45 AM 5 Nov 2024', outTime: '5:30 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 3, empName: 'Sam Wilson', empCode: 'E125', inTime: '8:50 AM 5 Nov 2024', outTime: '5:15 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 4, empName: 'Chris Lee', empCode: 'E126', inTime: '10:00 AM 5 Nov 2024', outTime: '7:00 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 5, empName: 'Emily Davis', empCode: 'E127', inTime: '9:15 AM 5 Nov 2024', outTime: '5:45 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 6, empName: 'Daniel Brown', empCode: 'E128', inTime: '9:40 AM 5 Nov 2024', outTime: '6:30 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Office' },
-    { id: 7, empName: 'Sophia Taylor', empCode: 'E129', inTime: '8:55 AM 5 Nov 2024', outTime: '5:00 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Home' },
-    { id: 8, empName: 'David White', empCode: 'E130', inTime: '9:20 AM 5 Nov 2024', outTime: '6:15 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Office' },
-    { id: 9, empName: 'Olivia Martin', empCode: 'E131', inTime: '9:10 AM 5 Nov 2024', outTime: '6:45 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Home' },
-    { id: 10, empName: 'Lucas Green', empCode: 'E132', inTime: '10:15 AM 5 Nov 2024', outTime: '7:30 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Office' },
-    { id: 11, empName: 'Charlotte Harris', empCode: 'E133', inTime: '9:05 AM 5 Nov 2024', outTime: '6:05 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 12, empName: 'James Scott', empCode: 'E134', inTime: '9:30 AM 5 Nov 2024', outTime: '5:30 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 13, empName: 'Ava Young', empCode: 'E135', inTime: '8:40 AM 5 Nov 2024', outTime: '5:50 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 14, empName: 'Ethan Walker', empCode: 'E136', inTime: '9:25 AM 5 Nov 2024', outTime: '6:10 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 15, empName: 'Mia King', empCode: 'E137', inTime: '9:00 AM 5 Nov 2024', outTime: '5:25 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 16, empName: 'Liam Rodriguez', empCode: 'E138', inTime: '9:50 AM 5 Nov 2024', outTime: '6:40 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 17, empName: 'Isabella Lopez', empCode: 'E139', inTime: '8:55 AM 5 Nov 2024', outTime: '5:35 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 18, empName: 'Mason Gonzalez', empCode: 'E140', inTime: '9:35 AM 5 Nov 2024', outTime: '6:20 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 19, empName: 'Amelia Perez', empCode: 'E141', inTime: '9:00 AM 5 Nov 2024', outTime: '6:30 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 20, empName: 'Oliver Nelson', empCode: 'E142', inTime: '10:05 AM 5 Nov 2024', outTime: '7:10 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 21, empName: 'Harper Carter', empCode: 'E143', inTime: '9:45 AM 5 Nov 2024', outTime: '5:55 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 22, empName: 'Benjamin Mitchell', empCode: 'E144', inTime: '9:25 AM 5 Nov 2024', outTime: '6:05 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 23, empName: 'Ella Roberts', empCode: 'E145', inTime: '9:10 AM 5 Nov 2024', outTime: '5:40 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 24, empName: 'Jack Phillips', empCode: 'E146', inTime: '9:30 AM 5 Nov 2024', outTime: '6:25 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 25, empName: 'Scarlett Evans', empCode: 'E147', inTime: '8:50 AM 5 Nov 2024', outTime: '5:50 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 26, empName: 'Henry Gray', empCode: 'E148', inTime: '9:15 AM 5 Nov 2024', outTime: '6:00 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 27, empName: 'Lily Davis', empCode: 'E149', inTime: '9:35 AM 5 Nov 2024', outTime: '5:45 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 28, empName: 'William Clark', empCode: 'E150', inTime: '9:50 AM 5 Nov 2024', outTime: '6:35 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' },
-    { id: 29, empName: 'Zoe Mitchell', empCode: 'E151', inTime: '9:10 AM 5 Nov 2024', outTime: '6:15 PM 5 Nov 2024', workStatus: 'Login', workLocation: 'Office' },
-    { id: 30, empName: 'Leo Martinez', empCode: 'E152', inTime: '10:20 AM 5 Nov 2024', outTime: '7:00 PM 5 Nov 2024', workStatus: 'Logout', workLocation: 'Home' }
-];
+import { API_BASE_URL } from '../../config/api';
 
 class AttendanceData extends Component {
     state = {
-        attendanceData: attendanceData,
-        attendanceDataList: attendanceData,
+        attendanceData: [],
+        attendanceDataList: [],
         currentPage: 1,
         recordsPerPage: 10,
         sortColumn: null,
@@ -52,6 +21,44 @@ class AttendanceData extends Component {
         searchName: '',
         searchInTime: '',
         searchOutTime: '',
+    };
+
+    componentDidMount() {
+        this.fetchAttendance();
+    }
+
+    fetchAttendance = async () => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/attendance`);
+            if (response.ok) {
+                const apiRecords = await response.json();
+                const localRecords = JSON.parse(localStorage.getItem('attendanceRecords')) || [];
+                const formattedLocal = localRecords.map((r, i) => ({
+                    id: 1000 + i,
+                    empName: r.employeeName,
+                    empCode: r.employeeId,
+                    inTime: `${r.checkInTime || '9:00 AM'} ${r.date}`,
+                    outTime: `${r.checkOutTime || '6:00 PM'} ${r.date}`,
+                    workStatus: r.status,
+                    workLocation: 'Office'
+                }));
+                const combined = [...apiRecords, ...formattedLocal];
+                this.setState({ attendanceData: combined, attendanceDataList: combined });
+            }
+        } catch (err) {
+            console.warn("Could not fetch attendance from backend:", err);
+            const localRecords = JSON.parse(localStorage.getItem('attendanceRecords')) || [];
+            const formattedLocal = localRecords.map((r, i) => ({
+                id: 1000 + i,
+                empName: r.employeeName,
+                empCode: r.employeeId,
+                inTime: `${r.checkInTime || '9:00 AM'} ${r.date}`,
+                outTime: `${r.checkOutTime || '6:00 PM'} ${r.date}`,
+                workStatus: r.status,
+                workLocation: 'Office'
+            }));
+            this.setState({ attendanceData: formattedLocal, attendanceDataList: formattedLocal });
+        }
     };
 
     handleNextPage = () => {
@@ -141,7 +148,7 @@ class AttendanceData extends Component {
                     <select value={this.state.searchName}
                         onChange={(e) => this.setState({ searchName: e.target.value })} className='report-select'>
                         <option value="" disabled selected>Employee Name</option>
-                        {attendanceData.map((eachData) => (
+                        {this.state.attendanceData.map((eachData) => (
                             <option key={eachData.id} value={eachData.empName}>{eachData.empName}</option>
                         ))}
                     </select>

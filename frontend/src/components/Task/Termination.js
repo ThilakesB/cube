@@ -24,6 +24,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import Navbar from "../Common_Bar/NavBar";
 import TopBar from "../Common_Bar/TopBar";
 import Sidebar from "../Common_Bar/Sidebar";
+import { API_BASE_URL } from '../../config/api';
 
 
 
@@ -41,17 +42,24 @@ const EmployeeInputFields = () => {
     reason: "",
   });
 
-  // Load data from local storage when the component mounts
-  useEffect(() => {
-    const storedData = JSON.parse(localStorage.getItem("terminationData")) || [];
-    setTerminationData(storedData);
-    setFilteredTerminationData(storedData); // Ensure filtered data is set during initial load
-  }, []);
+  // Load data from backend when the component mounts
+  const fetchTerminations = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/terminations`);
+      if (response.ok) {
+        const data = await response.json();
+        const items = data.terminations || [];
+        setTerminationData(items);
+        setFilteredTerminationData(items);
+      }
+    } catch (error) {
+      console.error('Error fetching terminations:', error);
+    }
+  };
 
-  // Save data to local storage whenever it changes
   useEffect(() => {
-    localStorage.setItem("terminationData", JSON.stringify(terminationData));
-  }, [terminationData]);
+    fetchTerminations();
+  }, []);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -68,12 +76,21 @@ const EmployeeInputFields = () => {
     }));
   };
 
-  const handleSubmit = () => {
-    const updatedData = [...terminationData, formData];
-    setTerminationData(updatedData);
-    setFilteredTerminationData(updatedData); // Update filtered data
+  const handleSubmit = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/terminations/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      if (response.ok) {
+        await fetchTerminations();
+      }
+    } catch (error) {
+      console.error('Error adding termination:', error);
+    }
     setFormData({ employeeName: "", noticeDate: "", terminatedDate: "", reason: "" });
-    setOpen(false); // Close the dialog
+    setOpen(false);
   };
 
   const handleSearch = () => {

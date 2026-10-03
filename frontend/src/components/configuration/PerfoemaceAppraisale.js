@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
 	Box,
 	Typography,
@@ -30,9 +30,8 @@ import TopBar from "../Common_Bar/TopBar";
 import Apraisal from "./ApraisalOrganization";
 import RadioButtonCheckedIcon from "@mui/icons-material/RadioButtonChecked";
 import CloseIcon from "@mui/icons-material/Close";
+import { API_BASE_URL } from '../../config/api';
 
-
-const employees = [];
 
 const PerformanceAppraisal = () => {
 	const [tabValue, setTabValue] = React.useState(0);
@@ -40,6 +39,31 @@ const PerformanceAppraisal = () => {
 	const [rowsPerPage, setRowsPerPage] = React.useState(5);
 	const [open, setOpen] = useState(false); // For dialog
 	const [trainers, setTrainers] = useState([]);
+	const [employeesState, setEmployeesState] = useState([]); // Use state for employees
+
+	// Fetch appraisals from backend
+	const fetchAppraisals = async () => {
+		try {
+			const response = await fetch(`${API_BASE_URL}/api/appraisals`);
+			if (response.ok) {
+				const data = await response.json();
+				const appraisals = (data.appraisals || []).map(a => ({
+					name: a.employeeName,
+					createdAt: a.appraisalDate || '',
+					department: a.department || '',
+					addedBy: 'Admin',
+					status: a.status || 'Active',
+				}));
+				setEmployeesState(appraisals);
+			}
+		} catch (error) {
+			console.error('Error fetching appraisals:', error);
+		}
+	};
+
+	useEffect(() => {
+		fetchAppraisals();
+	}, []);
 
 	const handleTabChange = (event, newValue) => {
 		setTabValue(newValue);
@@ -61,7 +85,6 @@ const PerformanceAppraisal = () => {
 	const handleCloseDialog = () => {
 		setOpen(false);
 	};
-	const [employeesState, setEmployeesState] = useState(employees); // Use state for employees
 
 	const handleStatusChange = (index, newStatus) => {
 		const updatedEmployees = [...employeesState];
@@ -290,7 +313,7 @@ const PerformanceAppraisal = () => {
 							{/* Pagination */}
 							<TablePagination
 								component="div"
-								count={employees.length}
+								count={employeesState.length}
 								page={0}
 								rowsPerPage={5}
 								onPageChange={() => {}}
@@ -461,7 +484,7 @@ const PerformanceAppraisal = () => {
 										</TableRow>
 									</TableHead>
 									<TableBody>
-										{employees
+										{employeesState
 											.slice(
 												page * rowsPerPage,
 												page * rowsPerPage + rowsPerPage
@@ -528,7 +551,7 @@ const PerformanceAppraisal = () => {
 							{/* Pagination */}
 							<TablePagination
 								component="div"
-								count={employees.length}
+								count={employeesState.length}
 								page={page}
 								rowsPerPage={rowsPerPage}
 								onPageChange={handleChangePage}

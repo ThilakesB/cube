@@ -1,38 +1,47 @@
-cat > .gitignore <<'EOF'
-# Frontend
+# Dependencies
+node_modules/
 frontend/node_modules/
-frontend/.cache/
-frontend/dist/
-frontend/build/
-
-# Backend
+venv/
 backend/venv/
-backend/__pycache__/
-backend/*.pyc
+.venv/
 
-# Environment files
+# Environment files & Secrets
 .env
 .env.*
 backend/.env
+backend/.env.*
 frontend/.env
 frontend/.env.*
 !.env.example
 
-# Python cache
+# Databases & local stores
+*.db
+*.sqlite
+*.sqlite3
+backend/*.db
+backend/erp.db
+
+# Build outputs
+build/
+dist/
+frontend/build/
+frontend/dist/
+*.tgz
+frontend/*.tgz
+
+# Python cache & compiled
 __pycache__/
+backend/__pycache__/
 *.pyc
 *.pyo
+*.pyd
 
-# Node
-node_modules/
-
-# Build/cache
-.cache/
-dist/
-build/
-
-# OS / editor
-.DS_Store
-.vscode/
+# Logs & temp files
 *.log
-EOF
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

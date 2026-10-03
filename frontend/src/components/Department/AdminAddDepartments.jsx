@@ -1,14 +1,16 @@
 import GlobalFormLayout from '../Common_Bar/GlobalFormLayout';
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {Grid,Typography,Box,TextField,Button,IconButton,InputBase,} from "@mui/material";
 import Navbar from "../Common_Bar/NavBar";
 
 import Sidebar from "../Common_Bar/Sidebar";
 
 import SettingsIcon from "@mui/icons-material/Settings";
+import { API_BASE_URL } from "../../config/api";
 
 const AdminAddDepartment = () => {
-    
+  const navigate = useNavigate();  
   const [formData, setFormData] = useState({
     departmentName: "",
     manager: "",
@@ -19,22 +21,31 @@ const AdminAddDepartment = () => {
     setFormData({ ...formData, [field]: event.target.value });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     console.log("Form Data:", formData);
-    setFormData({
-        departmentName: "",
-        manager: "",
-        parentDepartment: "",
-    })
+    try {
+      try {
+        await fetch(`${API_BASE_URL}/api/departments`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        });
+      } catch (backendErr) {
+        console.warn('Backend not reachable, saving locally:', backendErr);
+      }
+
+      const existing = JSON.parse(localStorage.getItem("departmentData")) || [];
+      localStorage.setItem("departmentData", JSON.stringify([...existing, formData]));
+    } catch (e) {
+      console.error(e);
+    }
+    navigate('/department');
   };
 
   const handleCancel = ()=>{
-        setFormData({departmentName: "",
-            manager: "",
-            parentDepartment: "",
-        })
-  }
+    navigate('/department');
+  };
 
   return (
     <GlobalFormLayout title="Add Department" backLink="/department">

@@ -27,6 +27,8 @@ import Navbar from "../Common_Bar/NavBar";
 import Sidebar from "../Common_Bar/Sidebar";
 import TopBar from "../Common_Bar/TopBar";
 import dayjs from "dayjs";
+import { Link } from "react-router-dom";
+import { API_BASE_URL } from "../../config/api";
 
 const Holidays = () => {
   const [openPopup, setOpenPopup] = useState(false);
@@ -45,16 +47,19 @@ const Holidays = () => {
   }, []);
 
   const fetchHolidays = async () => {
+    const localHolidays = JSON.parse(localStorage.getItem("holidaysData")) || [];
     try {
-      const response = await fetch("http://3.108.223.238:5000/api/holidays");
+      const response = await fetch(`${API_BASE_URL}/api/holidays`);
       if (response.ok) {
         const data = await response.json();
-        setHolidays(data.holidays || []);
+        const apiList = data.holidays || [];
+        setHolidays([...apiList, ...localHolidays]);
       } else {
-        console.error("Failed to fetch holiday data");
+        setHolidays(localHolidays);
       }
     } catch (error) {
       console.error("Error fetching holiday data:", error);
+      setHolidays(localHolidays);
     }
   };
 
@@ -103,7 +108,7 @@ const Holidays = () => {
     setError("");
 
     try {
-      const response = await fetch("http://3.108.223.238:5000/api/holidays/add", {
+      const response = await fetch(`${API_BASE_URL}/api/holidays/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -112,7 +117,8 @@ const Holidays = () => {
       });
 
       if (response.ok) {
-        const newHoliday = await response.json();
+        const resData = await response.json();
+        const newHoliday = resData.holiday || resData;
         setHolidays((prevData) => [...prevData, newHoliday]);
         setSuccess(true);
         handleClosePopup();
@@ -155,10 +161,11 @@ const Holidays = () => {
                   Holidays
                 </Typography>
                 <Button
+                  component={Link}
+                  to="/addholiday"
                   variant="contained"
                   align="right"
                   color="primary"
-                  onClick={handleOpenPopup}
                   sx={{
                     backgroundColor: "#7152F3",
                     borderRadius: "10px",

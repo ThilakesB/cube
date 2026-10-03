@@ -83,7 +83,7 @@ const Promotion = () => {
   const fetchPromotions = async () => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       console.log('Fetching promotions from:', `${API_URL}/api/promotions`);
       
       const response = await fetch(`${API_URL}/api/promotions`);
@@ -159,7 +159,7 @@ const Promotion = () => {
     if (window.confirm(`Are you sure you want to delete promotion for: ${selectedJob.employeeName}?`)) {
       try {
         setLoading(true);
-        const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
         const endpoint = `${API_URL}/api/promotions/delete/${selectedJob._id}`;
 
         const response = await fetch(endpoint, {
@@ -260,7 +260,7 @@ const Promotion = () => {
 
   const submitPromotionToDatabase = async (promotionData) => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       const endpoint = `${API_URL}/api/promotions/add`;
 
       const response = await fetch(endpoint, {

@@ -72,7 +72,7 @@ const Shortlist = () => {
   useEffect(() => {
     const fetchShortlist = async () => {
       try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
         const response = await fetch(`${API_URL}/api/shortlists`);
         if (!response.ok) {
           throw new Error("Failed to fetch shortlist");
@@ -141,7 +141,7 @@ const Shortlist = () => {
 
   const addShortlistToDatabase = async (formData) => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || "http://3.108.223.238:5000";
+      const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
       const endpoint = `${API_URL}/api/shortlists/add`;
 
       const response = await fetch(endpoint, {

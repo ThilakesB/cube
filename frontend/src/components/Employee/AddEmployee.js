@@ -7,6 +7,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Img from "../../assets/Congratulations.jpg";
 import Sidebar from '../Common_Bar/Sidebar';
 import Navbar from '../Common_Bar/NavBar';
+import { API_BASE_URL } from '../../config/api';
 
 const style = {
   position: 'absolute',
@@ -91,23 +92,24 @@ const EmployeeAdd = () => {
     };
     console.log("Form Data:", JSON.stringify(formData, null, 2));
 
-    fetch("http://localhost:8000/employees/", {
+    fetch(`${API_BASE_URL}/api/employees`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(formData)
     })
-    .then(response => {
+    .then(async response => {
       if (response.ok) {
         handleOpen();
       } else {
-        response.json().then(data => setError(data.detail || "Error saving employee"));
+        const data = await response.json().catch(() => ({}));
+        setError(data.detail || "Error saving employee");
       }
     })
     .catch(err => {
       console.error(err);
-      setError("Failed to connect to the backend.");
+      setError("Failed to connect to the backend server at " + API_BASE_URL);
     });
   };
 

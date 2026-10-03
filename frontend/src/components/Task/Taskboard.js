@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { styled } from "@mui/system";
 
 import {
@@ -20,6 +20,7 @@ import Followersimage2 from "../../assets/project-images/Followers-image2.png";
 import Followersimage3 from "../../assets/project-images/Followers-image3.png";
 import Followersimage4 from "../../assets/project-images/Followers-image4.png";
 import Followersimage5 from "../../assets/project-images/Followers-image5.png";
+import { API_BASE_URL } from '../../config/api';
 
 const Taskboard = () => {
   const [openPopup, setOpenPopup] = useState(false);
@@ -57,8 +58,25 @@ const Taskboard = () => {
     });
   };
 
-  // Save project details to localStorage
-  const handleSave = () => {
+  // Fetch tasks from backend
+  const fetchTasks = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/tasks`);
+      if (response.ok) {
+        const data = await response.json();
+        setStoredProjects(data.tasks || []);
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  // Save task to backend
+  const handleSave = async () => {
     if (!formData.taskName || !formData.client) {
       alert("Task Name and Client are required.");
       return;
@@ -70,11 +88,28 @@ const Taskboard = () => {
       return;
     }
 
-    const existingProjects =
-      JSON.parse(localStorage.getItem("projectData")) || [];
-    const updatedProjects = [...existingProjects, formData];
-    localStorage.setItem("projectData", JSON.stringify(updatedProjects));
-    setStoredProjects(updatedProjects);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/tasks/add`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskName: formData.taskName,
+          client: formData.client,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          rate: formData.rate,
+          priority: formData.priority,
+          projectLead: formData.projectLead,
+          teamMembers: formData.teamMembers,
+          jobDescription: formData.jobDescription,
+        }),
+      });
+      if (response.ok) {
+        await fetchTasks();
+      }
+    } catch (error) {
+      console.error('Error saving task:', error);
+    }
 
     console.log("Project saved:", formData);
     handleClosePopup();

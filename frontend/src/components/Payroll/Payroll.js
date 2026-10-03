@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   TextField,
   Button,
@@ -24,8 +24,8 @@ import emp3 from "../../assets/emp3.png";
 import Navbar from "../Common_Bar/NavBar";
 import TopBar from "../Common_Bar/TopBar";
 import Sidebar from "../Common_Bar/Sidebar";
-
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { API_BASE_URL } from "../../config/api";
 
 
 
@@ -90,7 +90,38 @@ const Payroll = () => {
     id: "",
     role: "",
   });
-  const [filteredEmployees, setFilteredEmployees] = useState(employees);
+  const initialEmployees = () => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('payrollData')) || [];
+      return [...employees, ...stored];
+    } catch (e) {
+      return employees;
+    }
+  };
+  const [allEmployeesList, setAllEmployeesList] = useState(initialEmployees);
+  const [filteredEmployees, setFilteredEmployees] = useState(initialEmployees);
+
+  const fetchSalaries = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/salaries`);
+      if (response.ok) {
+        const apiSalaries = await response.json();
+        const stored = JSON.parse(localStorage.getItem('payrollData')) || [];
+        const combined = [...apiSalaries, ...stored];
+        const uniqueIds = new Set(combined.map(e => e.id));
+        const remainingDefault = employees.filter(e => !uniqueIds.has(e.id));
+        const all = [...combined, ...remainingDefault];
+        setAllEmployeesList(all);
+        setFilteredEmployees(all);
+      }
+    } catch (err) {
+      console.warn("Could not fetch salaries from backend:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSalaries();
+  }, []);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -99,7 +130,7 @@ const Payroll = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const itemsPerPage = 2; // Changed to 2 items per page
+  const itemsPerPage = 5; // Display 5 items per page
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
 
@@ -120,10 +151,10 @@ const Payroll = () => {
 
   const handleFilter = () => {
     const { name, id, role } = filters;
-    const filtered = employees.filter(
+    const filtered = allEmployeesList.filter(
       (emp) =>
-        emp.name.toLowerCase().includes(name.toLowerCase()) &&
-        emp.id.toLowerCase().includes(id.toLowerCase()) &&
+        (emp.name || "").toLowerCase().includes(name.toLowerCase()) &&
+        (emp.id || "").toLowerCase().includes(id.toLowerCase()) &&
         (!role || emp.role === role)
     );
     setFilteredEmployees(filtered);
@@ -178,13 +209,18 @@ const Payroll = () => {
             style={{ minWidth: "200px" }}
           >
             <MenuItem value="">Select Designation</MenuItem>
-            {[...new Set(employees.map((emp) => emp.role))].map((role) => (
+            {[...new Set(allEmployeesList.map((emp) => emp.role))].map((role) => (
               <MenuItem key={role} value={role}>
                 {role}
               </MenuItem>
             ))}
           </Select>
-          <Button variant="contained" sx={{ backgroundColor: "#FF902F" }} onClick={handleOpen}>
+          <Button
+            component={Link}
+            to="/addsalary"
+            variant="contained"
+            sx={{ backgroundColor: "#FF902F", textTransform: "none", "&:hover": { backgroundColor: "#e07d24" } }}
+          >
             Add Salary
           </Button>
         </div>

@@ -83,7 +83,7 @@ const Resignation = () => {
   const fetchResignations = async () => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       console.log('Fetching resignations from:', `${API_URL}/api/resignations`);
       
       const response = await fetch(`${API_URL}/api/resignations`);
@@ -168,7 +168,7 @@ const Resignation = () => {
     if (window.confirm(`Are you sure you want to delete resignation for: ${selectedJob.employeeName}?`)) {
       try {
         setLoading(true);
-        const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
         const endpoint = `${API_URL}/api/resignations/delete/${selectedJob._id}`;
 
         const response = await fetch(endpoint, {
@@ -273,7 +273,7 @@ const Resignation = () => {
 
   const submitResignationToDatabase = async (resignationData) => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       const endpoint = `${API_URL}/api/resignations/add`;
 
       const response = await fetch(endpoint, {

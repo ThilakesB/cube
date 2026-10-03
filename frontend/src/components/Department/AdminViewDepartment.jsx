@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   Grid,
   Typography,
@@ -25,6 +26,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import Navbar from "../Common_Bar/NavBar";
 import TopBar from "../Common_Bar/TopBar";
 import Sidebar from "../Common_Bar/Sidebar";
+import { API_BASE_URL } from "../../config/api";
 
 import emp1 from '../../assets/emp1.png';
 import emp2 from '../../assets/emp2.png';
@@ -68,9 +70,42 @@ const AdminDepartmentView = () => {
     },
   ];
 
+  const [departmentList, setDepartmentList] = useState(departments);
   const [anchorEl, setAnchorEl] = useState(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(7);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/departments`);
+        if (response.ok) {
+          const apiDepts = await response.json();
+          const localDepts = JSON.parse(localStorage.getItem("departmentData")) || [];
+          const combined = [...apiDepts, ...localDepts];
+          if (combined.length > 0) {
+            const formatted = combined.map((d, i) => ({
+              img: emp1,
+              name: d.manager || d.departmentName || "Manager",
+              id: `DP-${1000 + (d.id || i)}`,
+              email: `${(d.manager || 'manager').toLowerCase().replace(/\s+/g, '')}@example.com`,
+              mobile: "9876543210",
+              joinDate: "1 Jan 2024",
+              role: d.departmentName || d.department_name || "Department",
+              currentProject: d.parentDepartment || d.parent_department || "General",
+              process: 70
+            }));
+            const uniqueRoles = new Set(formatted.map(d => d.role));
+            const remainingDefault = departments.filter(d => !uniqueRoles.has(d.role));
+            setDepartmentList([...formatted, ...remainingDefault]);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch departments from backend:", err);
+      }
+    };
+    fetchDepartments();
+  }, []);
 
   const handleMenuOpen = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
@@ -80,7 +115,7 @@ const AdminDepartmentView = () => {
     setPage(0);
   };
 
-  const displayedRows = departments.slice(
+  const displayedRows = departmentList.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
   );
@@ -128,6 +163,8 @@ const AdminDepartmentView = () => {
                 </Typography>
               </Box>
               <Button
+                component={Link}
+                to="/adddepartment"
                 variant="contained"
                 sx={{
                   background: "#004E69",
@@ -138,6 +175,7 @@ const AdminDepartmentView = () => {
                   textTransform: "none",
                   fontSize: "14px",
                   fontWeight: 500,
+                  "&:hover": { background: "#003A4F" }
                 }}
               >
                 Add New

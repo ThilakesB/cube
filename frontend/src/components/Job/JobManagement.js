@@ -89,7 +89,7 @@ const JobManagement = () => {
   const fetchJobs = async () => {
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       const response = await fetch(`${API_URL}/api/jobs`);
       
       if (!response.ok) {
@@ -149,7 +149,7 @@ const JobManagement = () => {
     
     try {
       setLoading(true);
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       const response = await fetch(`${API_URL}/api/jobs/${selectedJob._id}`, {
         method: 'DELETE',
       });
@@ -212,7 +212,7 @@ const JobManagement = () => {
 
   const addJobToDatabase = async (formData) => {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://3.108.223.238:5000';
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
       const endpoint = `${API_URL}/api/jobs/add`;
 
       const response = await fetch(endpoint, {
