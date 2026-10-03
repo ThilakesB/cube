@@ -306,6 +306,8 @@ def delete_holiday(holiday_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"status": "success", "message": "Holiday deleted"}
 
+from datetime import datetime
+
 # ==================== ATTENDANCE ====================
 
 def serialize_attendance(att: models.Attendance):
@@ -328,20 +330,36 @@ def serialize_attendance(att: models.Attendance):
 
 @app.get("/api/attendance")
 def get_attendance(db: Session = Depends(get_db)):
-    records = db.query(models.Attendance).all()
+    records = db.query(models.Attendance).order_by(models.Attendance.id.desc()).all()
     return [serialize_attendance(r) for r in records]
 
 @app.post("/api/attendance")
 def create_attendance(att_data: schemas.AttendanceCreate, db: Session = Depends(get_db)):
     name = att_data.employeeName or att_data.employee_name or "Unknown Employee"
     emp_code = att_data.employeeId or att_data.employee_id or "E-001"
-    c_in = att_data.checkInTime or att_data.check_in_time or "09:00"
-    c_out = att_data.checkOutTime or att_data.check_out_time or "18:00"
+    c_in = att_data.checkInTime or att_data.check_in_time or "09:00 AM"
+    c_out = att_data.checkOutTime or att_data.check_out_time or "06:00 PM"
+    record_date = att_data.date or datetime.now().strftime("%Y-%m-%d")
+
+    # Check if duplicate exists for same employee and date, update if so
+    existing = db.query(models.Attendance).filter(
+        (models.Attendance.employee_id == emp_code) | (models.Attendance.employee_name == name),
+        models.Attendance.date == record_date
+    ).first()
+
+    if existing:
+        existing.status = att_data.status or existing.status
+        existing.check_in_time = c_in
+        existing.check_out_time = c_out
+        existing.remarks = att_data.remarks or existing.remarks
+        db.commit()
+        db.refresh(existing)
+        return serialize_attendance(existing)
 
     db_att = models.Attendance(
         employee_name=name,
         employee_id=emp_code,
-        date=att_data.date,
+        date=record_date,
         status=att_data.status or "Present",
         check_in_time=c_in,
         check_out_time=c_out,
@@ -352,18 +370,190 @@ def create_attendance(att_data: schemas.AttendanceCreate, db: Session = Depends(
     db.refresh(db_att)
     return serialize_attendance(db_att)
 
+# ⚡ Fast 5-Second Quick Clock-In / Clock-Out Endpoint
+@app.post("/api/attendance/quick-clock-in")
+def quick_clock_in(payload: dict, db: Session = Depends(get_db)):
+    emp_identifier = str(payload.get("employee_id") or payload.get("employeeId") or "").strip()
+    emp_name = str(payload.get("employee_name") or payload.get("employeeName") or "").strip()
+    action = payload.get("action", "check_in") # 'check_in', 'check_out', or 'toggle'
+    status = payload.get("status", "Present")
+    current_date = payload.get("date") or datetime.now().strftime("%Y-%m-%d")
+    current_time = payload.get("time") or datetime.now().strftime("%I:%M %p")
+
+    # Look up employee in database
+    emp = None
+    if emp_identifier:
+        emp = db.query(models.Employee).filter(
+            (models.Employee.staff_id == emp_identifier) | 
+            (models.Employee.id == int(emp_identifier) if emp_identifier.isdigit() else False)
+        ).first()
+    if not emp and emp_name:
+        emp = db.query(models.Employee).filter(
+            (models.Employee.first_name + " " + models.Employee.last_name).ilike(f"%{emp_name}%")
+        ).first()
+
+    final_name = emp_name or (f"{emp.first_name} {emp.last_name}" if emp else "Staff Member")
+    final_code = emp.staff_id if emp else (emp_identifier or "EMP-001")
+
+    # Find existing record for today
+    existing = db.query(models.Attendance).filter(
+        (models.Attendance.employee_id == final_code) | (models.Attendance.employee_name == final_name),
+        models.Attendance.date == current_date
+    ).first()
+
+    if existing:
+        if action == "check_out":
+            existing.check_out_time = current_time
+        elif action == "check_in":
+            existing.check_in_time = current_time
+            existing.status = status
+        else: # toggle or update
+            existing.status = status
+            if not existing.check_in_time:
+                existing.check_in_time = current_time
+        db.commit()
+        db.refresh(existing)
+        return {
+            "status": "success",
+            "message": f"Successfully recorded {action.replace('_', ' ')} for {final_name} at {current_time}",
+            "data": serialize_attendance(existing)
+        }
+
+    # New attendance record
+    new_att = models.Attendance(
+        employee_name=final_name,
+        employee_id=final_code,
+        date=current_date,
+        status=status,
+        check_in_time=current_time if action != "check_out" else "09:00 AM",
+        check_out_time=current_time if action == "check_out" else "06:00 PM",
+        remarks=f"Fast Punch: {action}"
+    )
+    db.add(new_att)
+    db.commit()
+    db.refresh(new_att)
+    return {
+        "status": "success",
+        "message": f"Successfully clocked in {final_name} at {current_time}",
+        "data": serialize_attendance(new_att)
+    }
+
+# ⚡ Bulk Attendance (1-Click Mark All / Selected Present)
+@app.post("/api/attendance/bulk")
+def bulk_attendance(payload: dict, db: Session = Depends(get_db)):
+    target_date = payload.get("date") or datetime.now().strftime("%Y-%m-%d")
+    status = payload.get("status", "Present")
+    mark_all = payload.get("mark_all", False)
+    employee_ids = payload.get("employee_ids", [])
+    records = payload.get("records", [])
+
+    created_or_updated = 0
+
+    if mark_all:
+        all_employees = db.query(models.Employee).all()
+        for emp in all_employees:
+            name = f"{emp.first_name} {emp.last_name}".strip() or "Employee"
+            code = emp.staff_id or f"EMP-{emp.id}"
+            existing = db.query(models.Attendance).filter(
+                (models.Attendance.employee_id == code) | (models.Attendance.employee_name == name),
+                models.Attendance.date == target_date
+            ).first()
+            if existing:
+                existing.status = status
+            else:
+                new_rec = models.Attendance(
+                    employee_name=name,
+                    employee_id=code,
+                    date=target_date,
+                    status=status,
+                    check_in_time="09:00 AM",
+                    check_out_time="06:00 PM",
+                    remarks="Bulk marked present"
+                )
+                db.add(new_rec)
+            created_or_updated += 1
+    elif employee_ids:
+        for eid in employee_ids:
+            emp = db.query(models.Employee).filter(
+                (models.Employee.staff_id == str(eid)) | 
+                (models.Employee.id == int(eid) if str(eid).isdigit() else False)
+            ).first()
+            if emp:
+                name = f"{emp.first_name} {emp.last_name}".strip()
+                code = emp.staff_id or f"EMP-{emp.id}"
+                existing = db.query(models.Attendance).filter(
+                    (models.Attendance.employee_id == code) | (models.Attendance.employee_name == name),
+                    models.Attendance.date == target_date
+                ).first()
+                if existing:
+                    existing.status = status
+                else:
+                    new_rec = models.Attendance(
+                        employee_name=name,
+                        employee_id=code,
+                        date=target_date,
+                        status=status,
+                        check_in_time="09:00 AM",
+                        check_out_time="06:00 PM",
+                        remarks="Batch marked"
+                    )
+                    db.add(new_rec)
+                created_or_updated += 1
+    elif records:
+        for r in records:
+            name = r.get("employeeName") or r.get("employee_name") or "Staff"
+            code = r.get("employeeId") or r.get("employee_id") or "E-001"
+            rec_date = r.get("date") or target_date
+            rec_status = r.get("status") or status
+            existing = db.query(models.Attendance).filter(
+                (models.Attendance.employee_id == code) | (models.Attendance.employee_name == name),
+                models.Attendance.date == rec_date
+            ).first()
+            if existing:
+                existing.status = rec_status
+                if r.get("checkInTime"):
+                    existing.check_in_time = r.get("checkInTime")
+                if r.get("checkOutTime"):
+                    existing.check_out_time = r.get("checkOutTime")
+            else:
+                new_rec = models.Attendance(
+                    employee_name=name,
+                    employee_id=code,
+                    date=rec_date,
+                    status=rec_status,
+                    check_in_time=r.get("checkInTime", "09:00 AM"),
+                    check_out_time=r.get("checkOutTime", "06:00 PM"),
+                    remarks=r.get("remarks", "")
+                )
+                db.add(new_rec)
+            created_or_updated += 1
+
+    db.commit()
+    return {
+        "status": "success",
+        "message": f"Successfully processed attendance for {created_or_updated} employees on {target_date}",
+        "count": created_or_updated
+    }
+
+@app.delete("/api/attendance/{att_id}")
+def delete_attendance(att_id: int, db: Session = Depends(get_db)):
+    att = db.query(models.Attendance).filter(models.Attendance.id == att_id).first()
+    if not att:
+        raise HTTPException(status_code=404, detail="Attendance record not found")
+    db.delete(att)
+    db.commit()
+    return {"status": "success", "message": "Attendance record deleted"}
+
 # Employee attendance endpoint for AttendancePage.js compatibility
 @app.get("/api/employee-attendance")
 def get_employee_attendance(db: Session = Depends(get_db)):
     employees = db.query(models.Employee).all()
     attendance_records = db.query(models.Attendance).all()
     
-    # Build attendance map
     data = []
-    current_year = 2026
+    current_year = datetime.now().year
     for emp in employees:
         emp_att = [a for a in attendance_records if a.employee_id == emp.staff_id or a.employee_name == f"{emp.first_name} {emp.last_name}"]
-        # Group into months
         months_list = []
         for m in range(1, 13):
             days_in_m = 31
@@ -371,7 +561,7 @@ def get_employee_attendance(db: Session = Depends(get_db)):
             for a in emp_att:
                 try:
                     parts = a.date.split("-")
-                    if len(parts) == 3 and int(parts[1]) == m:
+                    if len(parts) == 3 and int(parts[1]) == m and int(parts[0]) == current_year:
                         day_num = int(parts[2])
                         if 1 <= day_num <= days_in_m:
                             days[day_num - 1] = True if a.status.lower() == "present" else False
@@ -381,7 +571,8 @@ def get_employee_attendance(db: Session = Depends(get_db)):
 
         data.append({
             "_id": str(emp.id),
-            "name": f"{emp.first_name} {emp.last_name}",
+            "staff_id": emp.staff_id,
+            "name": f"{emp.first_name} {emp.last_name}".strip() or "Employee",
             "attendance": months_list
         })
     return {"data": data}
@@ -389,16 +580,19 @@ def get_employee_attendance(db: Session = Depends(get_db)):
 @app.post("/api/employee-attendance/add")
 def add_employee_attendance(payload: dict, db: Session = Depends(get_db)):
     name = payload.get("name", "New Employee")
+    parts = name.split()
+    first_n = parts[0] if parts else "Staff"
+    last_n = " ".join(parts[1:]) if len(parts) > 1 else ""
     db_emp = models.Employee(
-        first_name=name.split()[0] if name else "Staff",
-        last_name=name.split()[1] if len(name.split()) > 1 else "",
-        email=f"{name.lower().replace(' ', '')}@example.com",
+        first_name=first_n,
+        last_name=last_n,
+        email=f"{first_n.lower()}{db.query(models.Employee).count() + 1}@company.com",
         phone_number="0000000000",
         gender="Other",
-        role="Admin",
-        designation="General",
+        role="Employee",
+        designation="General Staff",
         staff_id=f"EMP-{db.query(models.Employee).count() + 1:03d}",
-        official_email=f"{name.lower().replace(' ', '')}@company.com",
+        official_email=f"{first_n.lower()}@company.com",
     )
     db.add(db_emp)
     db.commit()
@@ -407,7 +601,51 @@ def add_employee_attendance(payload: dict, db: Session = Depends(get_db)):
 
 @app.post("/api/employee-attendance/{emp_id}")
 def update_employee_attendance(emp_id: str, payload: dict, db: Session = Depends(get_db)):
-    return {"status": "success", "message": "Attendance updated"}
+    # Find employee
+    emp = db.query(models.Employee).filter(
+        (models.Employee.id == int(emp_id) if emp_id.isdigit() else False) |
+        (models.Employee.staff_id == emp_id)
+    ).first()
+
+    if not emp:
+        return {"status": "error", "message": "Employee not found"}
+
+    att_list = payload.get("attendance", [])
+    emp_name = f"{emp.first_name} {emp.last_name}".strip()
+    emp_code = emp.staff_id or f"EMP-{emp.id}"
+
+    for entry in att_list:
+        month = entry.get("month")
+        year = entry.get("year", datetime.now().year)
+        days = entry.get("days", [])
+        for day_idx, is_present in enumerate(days):
+            day_num = day_idx + 1
+            date_str = f"{year:04d}-{month:02d}-{day_num:02d}"
+            existing = db.query(models.Attendance).filter(
+                (models.Attendance.employee_id == emp_code) | (models.Attendance.employee_name == emp_name),
+                models.Attendance.date == date_str
+            ).first()
+
+            if is_present:
+                if not existing:
+                    new_rec = models.Attendance(
+                        employee_name=emp_name,
+                        employee_id=emp_code,
+                        date=date_str,
+                        status="Present",
+                        check_in_time="09:00 AM",
+                        check_out_time="06:00 PM",
+                        remarks="Marked from sheet"
+                    )
+                    db.add(new_rec)
+                else:
+                    existing.status = "Present"
+            else:
+                if existing:
+                    existing.status = "Absent"
+
+    db.commit()
+    return {"status": "success", "message": "Attendance updated in database successfully"}
 
 # ==================== DEPARTMENTS ====================
 

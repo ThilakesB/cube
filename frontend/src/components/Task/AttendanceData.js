@@ -147,7 +147,7 @@ class AttendanceData extends Component {
                 <div className='report-search-container'>
                     <select value={this.state.searchName}
                         onChange={(e) => this.setState({ searchName: e.target.value })} className='report-select'>
-                        <option value="" disabled selected>Employee Name</option>
+                        <option value="" disabled>Select Employee Name</option>
                         {this.state.attendanceData.map((eachData) => (
                             <option key={eachData.id} value={eachData.empName}>{eachData.empName}</option>
                         ))}

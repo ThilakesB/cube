@@ -12,11 +12,12 @@ import {
   Typography,
   Card,
   CardContent,
-  Divider,
   Chip,
-  InputLabel,
-  CircularProgress
+  CircularProgress,
+  Divider,
+  Tooltip
 } from '@mui/material';
+import { Bolt, AccessTime, CheckCircle, GroupAdd, RestartAlt } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
 import GlobalFormLayout from '../Common_Bar/GlobalFormLayout';
 import Img from '../../assets/Congratulations.jpg';
@@ -27,10 +28,10 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 400,
+  width: 420,
   bgcolor: 'background.paper',
   boxShadow: 24,
-  borderRadius: '12px',
+  borderRadius: '16px',
   p: 4,
   display: 'flex',
   flexDirection: 'column',
@@ -44,14 +45,16 @@ const AddAttendance = () => {
   const [employeesList, setEmployeesList] = useState([]);
   const [loadingEmployees, setLoadingEmployees] = useState(true);
   const [selectedEmpObj, setSelectedEmpObj] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [consecutiveSavedCount, setConsecutiveSavedCount] = useState(0);
 
   const [formData, setFormData] = useState({
     employeeName: '',
     employeeId: '',
     date: new Date().toISOString().split('T')[0],
     status: 'Present',
-    checkInTime: '09:00',
-    checkOutTime: '18:00',
+    checkInTime: '09:00 AM',
+    checkOutTime: '06:00 PM',
     remarks: ''
   });
 
@@ -67,7 +70,6 @@ const AddAttendance = () => {
           const data = await response.json();
           setEmployeesList(data || []);
         } else {
-          // Fallback to local storage
           const localEmps = JSON.parse(localStorage.getItem('employees')) || [];
           setEmployeesList(localEmps);
         }
@@ -82,6 +84,26 @@ const AddAttendance = () => {
 
     fetchEmployees();
   }, []);
+
+  // Preset shifts
+  const applyPreset = (inTime, outTime, statusName = 'Present') => {
+    setFormData((prev) => ({
+      ...prev,
+      checkInTime: inTime,
+      checkOutTime: outTime,
+      status: statusName
+    }));
+  };
+
+  const applyCurrentTime = () => {
+    const now = new Date();
+    const formatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    setFormData((prev) => ({
+      ...prev,
+      checkInTime: formatted,
+      status: 'Present'
+    }));
+  };
 
   // When an employee is chosen from the dropdown
   const handleEmployeeSelect = (event) => {
@@ -113,34 +135,55 @@ const AddAttendance = () => {
     setFormData({ ...formData, [field]: event.target.value });
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
+  const saveRecord = async () => {
     if (!formData.employeeName.trim() || !formData.employeeId.trim() || !formData.date) {
-      setError('Please select an employee and provide the attendance date.');
-      return;
+      setError('Please select an employee and specify the attendance date.');
+      return false;
     }
 
     setError('');
+    setIsSubmitting(true);
 
     try {
-      try {
-        await fetch(`${API_BASE_URL}/api/attendance`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        });
-      } catch (backendErr) {
-        console.warn('Backend not reachable, saving locally:', backendErr);
-      }
+      await fetch(`${API_BASE_URL}/api/attendance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
 
       const existingRecords = JSON.parse(localStorage.getItem('attendanceRecords')) || [];
       const updatedRecords = [...existingRecords, formData];
       localStorage.setItem('attendanceRecords', JSON.stringify(updatedRecords));
-      setOpenModal(true);
+      return true;
     } catch (err) {
       console.error('Error saving attendance record:', err);
       setError('Failed to save attendance record.');
+      return false;
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const success = await saveRecord();
+    if (success) {
+      setOpenModal(true);
+    }
+  };
+
+  const handleSaveAndAddAnother = async () => {
+    const success = await saveRecord();
+    if (success) {
+      setConsecutiveSavedCount((prev) => prev + 1);
+      // Reset only employee field to allow fast 5-second consecutive entry
+      setSelectedEmpObj(null);
+      setFormData((prev) => ({
+        ...prev,
+        employeeName: '',
+        employeeId: '',
+        remarks: ''
+      }));
     }
   };
 
@@ -154,16 +197,53 @@ const AddAttendance = () => {
   };
 
   return (
-    <GlobalFormLayout title="Record Employee Attendance" backLink="/attendance">
+    <GlobalFormLayout title="Record Attendance Entry" backLink="/attendance">
+      {consecutiveSavedCount > 0 && (
+        <Alert severity="success" sx={{ mb: 2.5, borderRadius: '10px' }}>
+          ⚡ <strong>{consecutiveSavedCount}</strong> attendance {consecutiveSavedCount === 1 ? 'record' : 'records'} saved to database! Ready for the next employee.
+        </Alert>
+      )}
+
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 3, borderRadius: '10px' }}>
           {error}
         </Alert>
       )}
 
       <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: '900px', mx: 'auto' }}>
+        
+        {/* Quick Shift Timing Presets Bar */}
+        <Box sx={{ mb: 2.5, p: 1.8, bgcolor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Bolt sx={{ color: '#16a34a' }} />
+            <Typography variant="body2" fontWeight="700" color="#166534">
+              5-Second Quick Timings:
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+            <Chip
+              label="⚡ Current Clock Time"
+              size="small"
+              onClick={applyCurrentTime}
+              sx={{ bgcolor: '#ffffff', border: '1px solid #86efac', fontWeight: 600, cursor: 'pointer', '&:hover': { bgcolor: '#dcfce7' } }}
+            />
+            <Chip
+              label="Standard (09:00 AM - 06:00 PM)"
+              size="small"
+              onClick={() => applyPreset('09:00 AM', '06:00 PM')}
+              sx={{ bgcolor: '#ffffff', border: '1px solid #86efac', fontWeight: 600, cursor: 'pointer', '&:hover': { bgcolor: '#dcfce7' } }}
+            />
+            <Chip
+              label="Morning Shift (08:00 AM - 04:00 PM)"
+              size="small"
+              onClick={() => applyPreset('08:00 AM', '04:00 PM')}
+              sx={{ bgcolor: '#ffffff', border: '1px solid #86efac', fontWeight: 600, cursor: 'pointer', '&:hover': { bgcolor: '#dcfce7' } }}
+            />
+          </Box>
+        </Box>
+
         {/* Section 1: Employee Selection */}
-        <Card sx={{ mb: 3, border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: 'none' }}>
+        <Card sx={{ mb: 3, border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
           <CardContent sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <Typography sx={{ fontWeight: '700', fontSize: '16px', color: '#004E69' }}>
@@ -196,7 +276,7 @@ const AddAttendance = () => {
                 {loadingEmployees ? (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
                     <CircularProgress size={20} />
-                    <Typography variant="body2" color="text.secondary">Loading registered employees...</Typography>
+                    <Typography variant="body2" color="text.secondary">Loading registered employees from database...</Typography>
                   </Box>
                 ) : (
                   <FormControl fullWidth>
@@ -212,7 +292,7 @@ const AddAttendance = () => {
                       }}
                     >
                       <MenuItem value="">
-                        <em>-- Select from Employee Dataset --</em>
+                        <em>-- Select Employee From Database --</em>
                       </MenuItem>
                       {employeesList.map((emp) => {
                         const fullName = `${emp.first_name || emp.firstname || ''} ${emp.last_name || emp.lastname || ''}`.trim() || emp.name || 'Unnamed';
@@ -259,11 +339,6 @@ const AddAttendance = () => {
                     {selectedEmpObj.designation && (
                       <Chip label={`Designation: ${selectedEmpObj.designation}`} size="small" sx={{ bgcolor: '#E0F2FE', color: '#0284C7' }} />
                     )}
-                    {selectedEmpObj.official_email && (
-                      <Typography variant="caption" color="text.secondary">
-                        Email: {selectedEmpObj.official_email}
-                      </Typography>
-                    )}
                   </Box>
                 </Grid>
               )}
@@ -272,10 +347,10 @@ const AddAttendance = () => {
         </Card>
 
         {/* Section 2: Attendance Information */}
-        <Card sx={{ mb: 3, border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: 'none' }}>
+        <Card sx={{ mb: 3, border: '1px solid #E2E8F0', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
           <CardContent sx={{ p: 3 }}>
             <Typography sx={{ fontWeight: '700', fontSize: '16px', color: '#004E69', mb: 2 }}>
-              2. Attendance & Schedule Details
+              2. Attendance & Timings
             </Typography>
 
             <Grid container spacing={3}>
@@ -292,7 +367,6 @@ const AddAttendance = () => {
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     borderRadius: '10px',
-                    border: '1px solid #D0D0D0',
                     '& .MuiInputBase-root': { height: '50px' },
                     '& .MuiInputBase-input': { padding: '0 14px' }
                   }}
@@ -308,13 +382,14 @@ const AddAttendance = () => {
                   <Select
                     value={formData.status}
                     onChange={handleChange('status')}
-                    sx={{ height: '50px', borderRadius: '10px', border: '1px solid #D0D0D0' }}
+                    sx={{ height: '50px', borderRadius: '10px' }}
                   >
-                    <MenuItem value="Present">Present</MenuItem>
-                    <MenuItem value="Absent">Absent</MenuItem>
-                    <MenuItem value="Half Day">Half Day</MenuItem>
-                    <MenuItem value="Leave">Leave</MenuItem>
-                    <MenuItem value="On Duty">On Duty</MenuItem>
+                    <MenuItem value="Present">🟢 Present</MenuItem>
+                    <MenuItem value="Late">🟡 Late</MenuItem>
+                    <MenuItem value="Half Day">🟣 Half Day</MenuItem>
+                    <MenuItem value="Leave">🔵 Leave</MenuItem>
+                    <MenuItem value="On Duty">🟠 On Duty</MenuItem>
+                    <MenuItem value="Absent">🔴 Absent</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -325,14 +400,12 @@ const AddAttendance = () => {
                   Check-in Time
                 </Typography>
                 <TextField
-                  type="time"
                   value={formData.checkInTime}
                   onChange={handleChange('checkInTime')}
+                  placeholder="09:00 AM"
                   fullWidth
-                  InputLabelProps={{ shrink: true }}
                   sx={{
                     borderRadius: '10px',
-                    border: '1px solid #D0D0D0',
                     '& .MuiInputBase-root': { height: '50px' },
                     '& .MuiInputBase-input': { padding: '0 14px' }
                   }}
@@ -345,14 +418,12 @@ const AddAttendance = () => {
                   Check-out Time
                 </Typography>
                 <TextField
-                  type="time"
                   value={formData.checkOutTime}
                   onChange={handleChange('checkOutTime')}
+                  placeholder="06:00 PM"
                   fullWidth
-                  InputLabelProps={{ shrink: true }}
                   sx={{
                     borderRadius: '10px',
-                    border: '1px solid #D0D0D0',
                     '& .MuiInputBase-root': { height: '50px' },
                     '& .MuiInputBase-input': { padding: '0 14px' }
                   }}
@@ -366,14 +437,13 @@ const AddAttendance = () => {
                 </Typography>
                 <TextField
                   multiline
-                  rows={3}
+                  rows={2}
                   value={formData.remarks}
                   onChange={handleChange('remarks')}
-                  placeholder="Optional notes or reason for leave / on duty..."
+                  placeholder="Optional notes..."
                   fullWidth
                   sx={{
-                    borderRadius: '10px',
-                    border: '1px solid #D0D0D0'
+                    borderRadius: '10px'
                   }}
                 />
               </Grid>
@@ -382,12 +452,14 @@ const AddAttendance = () => {
         </Card>
 
         {/* Action Buttons */}
-        <Box sx={{ display: 'flex', gap: 2, mt: 3, mb: 4 }}>
+        <Box sx={{ display: 'flex', gap: 2, mt: 3, mb: 4, flexWrap: 'wrap' }}>
           <Button
             type="submit"
+            disabled={isSubmitting}
             variant="contained"
+            startIcon={<CheckCircle />}
             sx={{
-              minWidth: '220px',
+              minWidth: '200px',
               height: '48px',
               backgroundColor: '#004E69',
               borderRadius: '10px',
@@ -398,14 +470,36 @@ const AddAttendance = () => {
               '&:hover': { backgroundColor: '#003A4F' }
             }}
           >
-            Save Attendance Record
+            {isSubmitting ? <CircularProgress size={22} color="inherit" /> : 'Save Attendance'}
           </Button>
+
+          <Button
+            type="button"
+            disabled={isSubmitting}
+            variant="contained"
+            onClick={handleSaveAndAddAnother}
+            startIcon={<RestartAlt />}
+            sx={{
+              minWidth: '220px',
+              height: '48px',
+              backgroundColor: '#55CE63',
+              borderRadius: '10px',
+              textTransform: 'none',
+              fontWeight: '700',
+              fontSize: '15px',
+              color: '#ffffff',
+              '&:hover': { backgroundColor: '#44b552' }
+            }}
+          >
+            ⚡ Save & Clock Next Staff
+          </Button>
+
           <Button
             type="button"
             variant="outlined"
             onClick={handleCancel}
             sx={{
-              minWidth: '130px',
+              minWidth: '120px',
               height: '48px',
               borderColor: '#004E69',
               color: '#004E69',
@@ -433,12 +527,12 @@ const AddAttendance = () => {
             component="img"
             src={Img}
             alt="Success"
-            sx={{ height: '160px', margin: '10px' }}
+            sx={{ height: '150px', margin: '10px' }}
           />
           <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', margin: '10px' }}>
-            <Typography variant="h5" fontWeight="bold" color="#004E69">Congratulations</Typography>
+            <Typography variant="h5" fontWeight="bold" color="#004E69">Success!</Typography>
             <Typography sx={{ color: 'gray', mt: 1, textAlign: 'center' }}>
-              Attendance for <strong>{formData.employeeName}</strong> has been saved.
+              Attendance for <strong>{formData.employeeName}</strong> has been saved to the database.
             </Typography>
           </Box>
           <Button
@@ -455,7 +549,7 @@ const AddAttendance = () => {
               '&:hover': { bgcolor: '#003A4F' }
             }}
           >
-            Continue
+            Go to Attendance Sheet
           </Button>
         </Box>
       </Modal>
